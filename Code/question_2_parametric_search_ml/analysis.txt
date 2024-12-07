@@ -29,3 +29,10 @@ Main Process
     +---------------- Results Collection ----------------+
     |
 Aggregated Results
+
+Speedup (S):
+S = Tserial/Tparallel
+(The time for the serial version divided by the time for the parallel version.)
+Efficiency (E):
+𝐸 = S/N
+(The speedup divided by the number of processes 𝑁)
