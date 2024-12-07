@@ -2,15 +2,21 @@ How multiprocessing.Pool Works
 Master Process:
 The main process creates a Pool of worker processes.
 It splits the tasks into chunks and assigns them to the workers.
+The main process divides tasks into smaller units and distributes them to the worker processes in the pool.
 
 Worker Processes:
 Each worker receives a chunk of tasks, processes them independently, and returns the results.
 
-Result Aggregation:
-The master process collects the results from all workers.
+Independent Workers:
+Each worker process trains and evaluates its assigned neural network model independently.
+
+Results Collection:
+Once workers complete their tasks, they return the results (parameters and accuracy) to the main process.
+Aggregation:
+The main process gathers the results from all workers into a single list or data structure.
+
 
 Diagram of multiprocessing.Pool
-
 
 Main Process
     |
