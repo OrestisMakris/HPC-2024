@@ -1,0 +1,25 @@
+How multiprocessing.Pool Works
+Master Process:
+The main process creates a Pool of worker processes.
+It splits the tasks into chunks and assigns them to the workers.
+
+Worker Processes:
+Each worker receives a chunk of tasks, processes them independently, and returns the results.
+
+Result Aggregation:
+The master process collects the results from all workers.
+
+Diagram of multiprocessing.Pool
+
+
+Main Process
+    |
+    +----------------- Task Splitting -----------------+
+    |                   [ Pool of Workers              |
+[ Worker 1 ]     [ Worker 2 ]     [ Worker 3 ] ... [ Worker N ]
+    |                 |                 |                |
+  Train/Evaluate   Train/Evaluate   Train/Evaluate   Train/Evaluate
+    |                 |                 |                |
+    +---------------- Results Collection ----------------+
+    |
+Aggregated Results
