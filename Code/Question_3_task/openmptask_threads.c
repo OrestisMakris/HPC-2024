@@ -3,7 +3,7 @@
 #include <math.h>
 #include <omp.h>
 
-#define ARRAY_SIZE 100 // Large number of iterations for heavy computation
+#define ARRAY_SIZE 10000 // Large number of iterations for heavy computation
 
 // Heavy computation function
 double work(int i) {
@@ -28,7 +28,7 @@ void initialize_serial(double *A, int size) {
 
 // OpenMP threads implementation
 void initialize_threads(double *A, int size) {
-#pragma omp parallel for schedule(dynamic, 2)
+    #pragma omp parallel for schedule(dynamic, 2)
     for (int i = 0; i < size; i++) {
         A[i] = work(i);
     }
@@ -36,12 +36,12 @@ void initialize_threads(double *A, int size) {
 
 // OpenMP tasks implementation
 void initialize_tasks(double *A, int size) {
-#pragma omp parallel
+    #pragma omp parallel
     {
-#pragma omp single
+        #pragma omp single
         {
             for (int i = 0; i < size; i++) {
-#pragma omp task firstprivate(i)
+                #pragma omp task firstprivate(i)
                 {
                     A[i] = work(i);
                 }
@@ -59,18 +59,21 @@ int main() {
     initialize_serial(A, ARRAY_SIZE);
     end = omp_get_wtime();
     printf("Serial execution time: %f seconds\n", end - start);
+    printf("Serial execution used 1 core with 1 thread\n");
 
     // Threads execution
     start = omp_get_wtime();
     initialize_threads(A, ARRAY_SIZE);
     end = omp_get_wtime();
     printf("Threads execution time: %f seconds\n", end - start);
+    printf("Threads execution used %d cores with %d threads\n", omp_get_num_procs(), omp_get_num_threads());
 
     // Tasks execution
     start = omp_get_wtime();
     initialize_tasks(A, ARRAY_SIZE);
     end = omp_get_wtime();
     printf("Tasks execution time: %f seconds\n", end - start);
+    printf("Tasks execution used %d cores with %d threads\n", omp_get_num_procs(), omp_get_num_threads());
 
     free(A);
     return 0;
