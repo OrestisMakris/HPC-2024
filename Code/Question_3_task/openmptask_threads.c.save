@@ -3,7 +3,7 @@
 #include <math.h>
 #include <omp.h>
 
-#define ARRAY_SIZE 1000000 // Large number of iterations for heavy computation
+#define ARRAY_SIZE 200000000 // Large number of iterations for heavy computation
 
 // Heavy computation function
 double work(int i) {
@@ -54,12 +54,12 @@ int main() {
     double *A = (double *)malloc(ARRAY_SIZE * sizeof(double));
     double start, end;
 
-    //Serial execution
-      start = omp_get_wtime();
-      initialize_serial(A, ARRAY_SIZE);
-      end = omp_get_wtime();
-    printf("Serial execution time: %f seconds\n", end - start);
-    printf("Serial execution used 1 core with 1 thread\n");
+    // Serial execution
+//    start = omp_get_wtime();
+  //  initialize_serial(A, ARRAY_SIZE);
+    //end = omp_get_wtime();
+   // printf("Serial execution time: %f seconds\n", end - start);
+    //printf("Serial execution used 1 core with 1 thread\n");
 
     // Threads execution
     start = omp_get_wtime();
