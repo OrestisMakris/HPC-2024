@@ -1,89 +1,92 @@
 from mpi4py import MPI
-import time
 from sklearn.neural_network import MLPClassifier
+from sklearn.model_selection import ParameterGrid
 from sklearn.datasets import make_classification
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
+import time
 
-# Η συνάρτηση που θα εκτελούν οι Workers
+# MPI setup
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+size = comm.Get_size()
+
+
+# Function to generate data and train the model
 def train_and_evaluate(params):
-    # Γεννάμε το dataset
+    # Generate dataset inside the worker
     X, y = make_classification(n_samples=1000, random_state=42, n_features=2,
                                n_informative=2, n_redundant=0, class_sep=0.8)
 
-    # Διαχωρισμός σε training και test set
+    # Split dataset into train and test sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
 
-    # Δημιουργία του μοντέλου MLP
-    m = MLPClassifier(hidden_layer_sizes=params, max_iter=2000, solver='adam', random_state=42)
+    # Extract parameters
+    l1 = params['mlp_layer1']
+    l2 = params['mlp_layer2']
+    l3 = params['mlp_layer3']
+    l4 = params['mlp_layer4']  # New layer
+    l5 = params['mlp_layer5']  # New layer
 
-    # Εκπαίδευση του μοντέλου
+    # Define MLP classifier with more hidden layers, more neurons, and larger epochs
+    m = MLPClassifier(hidden_layer_sizes=(l1, l2, l3, l4, l5), max_iter=2000, solver='adam', random_state=42)
+
+    # Fit the classifier
     m.fit(X_train, y_train)
 
-    # Πρόβλεψη και αξιολόγηση
+    # Predict and evaluate
     y_pred = m.predict(X_test)
     ac = accuracy_score(y_test, y_pred)
 
-    return ac
+    return (params, ac)
 
-# Κώδικας για τον Master
-def master():
-    # Αρχικοποίηση του MPI
-    comm = MPI.COMM_WORLD
-    size = comm.Get_size()  # Ο αριθμός των διεργασιών
-    rank = comm.Get_rank()  # Η θέση (rank) της τρέχουσας διεργασίας
 
-    # Ορισμός παραμέτρων για τον Worker
-    param_grid = [
-        (128, 128, 128, 128, 128),
-        (256, 128, 128, 128, 128),
-        (128, 256, 128, 128, 128)
-    ]
+# Define parameter grid for larger networks
+params = [{'mlp_layer1': [128, 256],
+           'mlp_layer2': [128, 256],
+           'mlp_layer3': [128, 256],
+           'mlp_layer4': [128, 256],  # New layer choices
+           'mlp_layer5': [128, 256]}]  # New layer choices
 
-    # Καταγραφή του χρόνου έναρξης
+pg = list(ParameterGrid(params))
+
+# Master process
+if rank == 0:
     start_time = time.time()
 
-    # Ο Master στέλνει τα δεδομένα στους Workers
-    for i in range(1, size):  # Ο Master είναι η διεργασία με rank 0
-        comm.send(param_grid[i-1], dest=i)
+    # Divide tasks among workers
+    tasks = [[] for _ in range(size)]
+    for i, param in enumerate(pg):
+        tasks[i % size].append(param)
 
-    # Ο Master συλλέγει τα αποτελέσματα από τους Workers
-    results = []
+    # Send tasks to workers
     for i in range(1, size):
-        result = comm.recv(source=i)
-        results.append(result)
+        comm.send(tasks[i], dest=i, tag=0)
 
-    # Καταγραφή του χρόνου ολοκλήρωσης
+    # Process tasks assigned to master
+    results = [train_and_evaluate(param) for param in tasks[0]]
+
+    # Receive results from workers
+    for i in range(1, size):
+        results += comm.recv(source=i, tag=1)
+
+    # End timing
     end_time = time.time()
 
-    # Εκτύπωση των αποτελεσμάτων
-    print("Αποτελέσματα από τους Workers:", results)
+    # Print results
+    for r in results:
+        print(r)
 
-    # Εκτύπωση του συνολικού χρόνου εκτέλεσης
-    total_time = end_time - start_time
-    print(f"Συνολικός χρόνος εκτέλεσης: {total_time:.2f} δευτερόλεπτα")
+    # Print total time taken
+    print(f"Total time taken: {end_time - start_time:.2f} seconds")
 
-# Κώδικας για τον Worker
-def worker():
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()  # Η θέση της τρέχουσας διεργασίας
+# Worker processes
+else:
+    # Receive tasks from master
+    tasks = comm.recv(source=0, tag=0)
 
-    # Ο Worker περιμένει τα δεδομένα από τον Master
-    params = comm.recv(source=0)
-    print(f"Worker {rank} επεξεργάζεται τις παραμέτρους: {params}")
+    # Process tasks
+    results = [train_and_evaluate(param) for param in tasks]
 
-    # Εκτέλεση της συνάρτησης train_and_evaluate
-    accuracy = train_and_evaluate(params)
-
-    # Ο Worker στέλνει τα αποτελέσματα στον Master
-    comm.send(accuracy, dest=0)
-
-# Κύριος κώδικας για να ξεκινήσει η εκτέλεση
-if __name__ == "__main__":
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-
-    if rank == 0:
-        master()
-    else:
-        worker()
+    # Send results back to master
+    comm.send(results, dest=0, tag=1)
