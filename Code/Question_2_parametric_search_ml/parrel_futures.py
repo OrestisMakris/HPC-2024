@@ -1,13 +1,12 @@
+from mpi4py import MPI
+from mpi4py.futures import MPICommExecutor
 from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import ParameterGrid
 from sklearn.datasets import make_classification
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
-from multiprocessing import Pool
 import time
 import os
-
-os.environ["OMP_NUM_THREADS"] = "1"  # Limit OpenMP to 1 thread
 
 # Function to generate data and train the model
 def train_and_evaluate(params):
@@ -47,19 +46,25 @@ params = [{'mlp_layer1': [128, 256],
 
 pg = ParameterGrid(params)
 
+# Get the MPI communicator
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+size = comm.Get_size()
+
 # Start timing
 start_time = time.time()
 
-# Create a Pool of workers (e.g., using 4 workers)
-with Pool() as pool:
-    results = pool.map(train_and_evaluate, pg)
+# Use MPICommExecutor for parallel execution
+with MPICommExecutor(comm) as executor:
+    results = list(executor.map(train_and_evaluate, pg))  # Ensure results are assigned here
 
 # End timing
 end_time = time.time()
 
-# Print results
-for r in results:
-    print(r)
+# Print results only on the root process (rank == 0)
+if rank == 0:
+    for r in results:
+        print(r)
 
-# Print total time taken
-print(f"Total time taken: {end_time - start_time:.2f} seconds")
+    # Print total time taken
+    print(f"Total time taken: {end_time - start_time:.2f} seconds")
