@@ -1,7 +1,7 @@
 #include <mpi.h>
 #include <stdio.h>
 
-void Exscan_pt2pt(int *sendbuf, int *recvbuf, int count, MPI_Comm comm);
+void Exscan_pt2pt(int *sendbuf, int *recvbuf, MPI_Comm comm);
 
 int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);
@@ -13,7 +13,7 @@ int main(int argc, char** argv) {
     int sendbuf = rank + 1;
     int recvbuf;
     
-    Exscan_pt2pt(&sendbuf, &recvbuf, 1, MPI_COMM_WORLD);
+    Exscan_pt2pt(&sendbuf, &recvbuf, MPI_COMM_WORLD);
     
     printf("Process %d: sendbuf = %d, recvbuf = %d\n", rank, sendbuf, recvbuf);
     
@@ -21,7 +21,7 @@ int main(int argc, char** argv) {
     return 0;
 }
 
-void Exscan_pt2pt(int *sendbuf, int *recvbuf, int count, MPI_Comm comm) {
+void Exscan_pt2pt(int *sendbuf, int *recvbuf, MPI_Comm comm) {
     int rank, size;
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
