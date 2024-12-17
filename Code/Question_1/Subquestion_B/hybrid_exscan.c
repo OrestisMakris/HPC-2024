@@ -19,11 +19,12 @@ void MPI_Exscan_omp(int *thread_send, int *thread_recv, int *recv_buf, int rank)
         // Barrier to ensure all threads have set their values
         #pragma omp barrier
 
+        // This block is essentially sequential
         #pragma omp for ordered
         for(int thread_num = 0; thread_num < omp_get_num_threads(); thread_num++){
             #pragma omp ordered
             {
-                // Thread 0 should receive *recv_buf
+                // Thread 0 should receive the previous processes' sum from *recvbuf
                 if(thread_num == 0){
                     thread_recv[0] = *recv_buf;
                 }
