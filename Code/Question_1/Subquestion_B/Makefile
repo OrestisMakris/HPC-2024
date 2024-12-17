@@ -16,7 +16,7 @@ hybrid_exscan: hybrid_exscan.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 clean:
-	rm -f hybrid_test omp_test omp_exscan
+	rm -f hybrid_test omp_test omp_exscan hybrid_exscan
 
 # To run mpi code, use the following commands:
 # mpirun -np <num_processes> ./program
