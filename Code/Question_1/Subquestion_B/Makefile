@@ -12,6 +12,9 @@ hybrid_test: hybrid_test.c
 omp_exscan: omp_exscan.c
 	$(CC) $(CFLAGS) -o $@ $<
 
+hybrid_exscan: hybrid_exscan.c
+	$(CC) $(CFLAGS) -o $@ $<
+
 clean:
 	rm -f hybrid_test omp_test omp_exscan
 

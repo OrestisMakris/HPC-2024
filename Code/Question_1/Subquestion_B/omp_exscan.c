@@ -4,6 +4,8 @@
 #include <omp.h>
 #include <assert.h>
 
+# define NUM_THREADS 4
+
 int main(int argc, char** argv)
 {
     int rank, size;
@@ -14,7 +16,7 @@ int main(int argc, char** argv)
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    omp_set_num_threads(4);
+    omp_set_num_threads(NUM_THREADS);
 
     // Initialize the send array of ints with the size of the number of threads
     int *send = (int *) malloc(omp_get_num_threads() * sizeof(int));
@@ -51,6 +53,7 @@ int main(int argc, char** argv)
         // A single thread prints the results
         #pragma omp single
         {
+            printf("Number of threads: %d\n", omp_get_num_threads());
             for(int i = 0; i < omp_get_num_threads(); i++){
                 printf("Thread %d: Sent: %d and Received: %d\n", i, send[i], recv[i]);
             }
