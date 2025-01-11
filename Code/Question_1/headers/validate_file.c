@@ -12,6 +12,8 @@ void validate_file(const char *filename, int ****original_matrices, int* thread_
     MPI_File file;
     MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_RDONLY, MPI_INFO_NULL, &file);
 
+    printf("\nValidation Results for process %d:\n", rank);
+
     #pragma omp parallel
     {   
         int thread_id = omp_get_thread_num();

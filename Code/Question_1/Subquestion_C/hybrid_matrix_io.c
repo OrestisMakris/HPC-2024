@@ -116,7 +116,6 @@ int main(int argc, char** argv)
         int thread_id = omp_get_thread_num();
         int *flat_matrix = (int *)malloc(N * N * N * sizeof(int));
         int idx = 0;
-
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N; j++) {
                 for (int k = 0; k < N; k++) {
@@ -125,7 +124,6 @@ int main(int argc, char** argv)
             }
         }
 
-        // isws na min doulepsei epeidi ola ta threads kanoun mpi calls
         MPI_Offset offset = thread_offsets[thread_id];
         MPI_File_write_at(file, offset, flat_matrix, N * N * N, MPI_INT, MPI_STATUS_IGNORE);
 

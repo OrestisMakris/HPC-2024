@@ -1,5 +1,5 @@
 CC = mpicc
-CFLAGS = -fopenmp -Wall -O2 -I../headers
+CFLAGS = -g -fopenmp -Wall -O2 -I../headers
 
 all: hybrid_matrix_io
 

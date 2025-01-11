@@ -28,6 +28,7 @@ void MPI_Exscan_omp(int *thread_send, int *thread_total, int *first_thread_recvb
         #pragma omp single
         {
             // Print the results
+            printf("\nExscan results for process %d:\n", rank);
             for (int i = 0; i < omp_get_num_threads(); i++) {
                 printf("Process: %d Thread %d: Sent: %d, Partial Reduction: %d\n",
                        rank, i, thread_send[i], thread_total[i]);
