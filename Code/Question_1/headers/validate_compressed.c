@@ -23,7 +23,9 @@ void validate_compressed_file(const char *filename, int ****original_matrices, i
     MPI_File file;
     MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_RDONLY, MPI_INFO_NULL, &file);
 
-    printf("\nProcess %d: Validating compressed file.\n", rank);
+    if(rank == 0){
+        printf("\nProcess %d: Validating compressed file.\n", rank);
+    }
     #pragma omp parallel
     {
         int thread_id = omp_get_thread_num();

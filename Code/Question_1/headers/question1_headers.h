@@ -4,7 +4,7 @@
 #include <mpi.h>
 
 // Declare the function MPI_Exscan_omp
-void MPI_Exscan_omp(int *thread_send, int *thread_total, int *first_thread_recvbuf, MPI_Comm comm);
+void MPI_Exscan_omp(int thread_send, int* prev_thread_send, int *thread_total, int first_thread_recvbuf, MPI_Comm comm);
 
 // Declate the function to validate the matrices.bin file
 void validate_file(const char *filename, int ****original_matrices, int* thread_offsets, int N, MPI_Comm comm);

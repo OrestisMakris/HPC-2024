@@ -81,7 +81,7 @@ int main(int argc, char** argv)
     MPI_File_open(MPI_COMM_WORLD, "matrices.bin", MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &file);
 
     // Compute the offsets using MPI_Exscan_omp
-    int thread_send[NUM_THREADS];
+    //int thread_send[NUM_THREADS];
     int thread_offsets[NUM_THREADS];
 
     // Receive buffer for the first thread of the MPI process
@@ -97,18 +97,21 @@ int main(int argc, char** argv)
         MPI_Recv(&first_thread_recvbuf, 1, MPI_INT, rank-1, 0, MPI_COMM_WORLD, &status);
     }
 
-    // Calculate the values each thread should send
+    // Get the offset for each thread
+    printf("\nExscan results for process %d:\n", rank);
+    int prev_thread_send = 0;
     #pragma omp parallel
     {
-        int thread_id = omp_get_thread_num();
-
-        // The value each thread should send is the size of its 3D matrix
-        thread_send[thread_id] = N * N * N * sizeof(int);
-        
+            #pragma omp for ordered
+            for(int i = 0; i < omp_get_num_threads(); i++){
+                # pragma omp ordered
+                {
+                    int thread_send = N * N * N * sizeof(int);
+                    MPI_Exscan_omp(thread_send, &prev_thread_send, thread_offsets, first_thread_recvbuf, MPI_COMM_WORLD);
+                    printf("Process: %d Thread %d: Sent: %d, Partial Reduction: %d\n",rank, i, thread_send, thread_offsets[i]);
+                }
+            }
     }
-
-    // Get the offset for each thread
-    MPI_Exscan_omp(thread_send, thread_offsets, &first_thread_recvbuf, MPI_COMM_WORLD);
 
     // Write each thread's matrix to the binary file
     #pragma omp parallel

@@ -4,43 +4,33 @@
 #include "question1_headers.h"
 
 // Implement the function MPI_Exscan_omp
-void MPI_Exscan_omp(int *thread_send, int *thread_total, int *first_thread_recvbuf, MPI_Comm comm){
+void MPI_Exscan_omp(int thread_send, int* prev_thread_send, int *thread_totals, int first_thread_recvbuf, MPI_Comm comm){
     int rank, size;
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
 
-    #pragma omp parallel
-    {
-        // Sequential reduction using `#pragma omp ordered`
-        #pragma omp for ordered
-        for (int thread_num = 0; thread_num < omp_get_num_threads(); thread_num++) {
-            #pragma omp ordered
-            {
-                if (thread_num == 0) {
-                    thread_total[0] = *first_thread_recvbuf;
-                } else {
-                    thread_total[thread_num] = thread_send[thread_num - 1] + thread_total[thread_num - 1];
-                }
-            }
+    int num_threads = omp_get_num_threads();   
+    int thread_id = omp_get_thread_num();
+
+    if (thread_id == 0) {
+        if (rank == 0) {
+            // The first thread of the first process has no previous process to receive from
+            thread_totals[0] = 0;
+        } else {
+            // The first thread of other processes
+            thread_totals[0] = first_thread_recvbuf;
         }
+        *prev_thread_send = thread_send + thread_totals[0];
+    } 
+    else {
+        // Update the total for this thread
+        thread_totals[thread_id] = *prev_thread_send;
+        // Send the total + this threads send value to the next thread
+        *prev_thread_send = thread_send + thread_totals[thread_id];
+    }
 
-        // A single thread prints the results and sends the last thread's sum to the next process
-        #pragma omp single
-        {
-            // Print the results
-            printf("\nExscan results for process %d:\n", rank);
-            for (int i = 0; i < omp_get_num_threads(); i++) {
-                printf("Process: %d Thread %d: Sent: %d, Partial Reduction: %d\n",
-                       rank, i, thread_send[i], thread_total[i]);
-            }
-
-            // Send the last thread's sum to the next process
-            if(rank < size - 1){
-            int num_threads = omp_get_num_threads();
-            int sum = thread_total[num_threads-1] + thread_send[num_threads-1];
-
-            MPI_Send(&sum, 1, MPI_INT, rank+1, 0, comm);
-            }
-        }
+    // The last thread sends this sum to the next process
+    if (thread_id == num_threads - 1 && rank != size - 1) {
+        MPI_Send(prev_thread_send, 1, MPI_INT, rank + 1, 0, comm);
     }
 }

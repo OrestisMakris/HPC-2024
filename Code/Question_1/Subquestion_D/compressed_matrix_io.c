@@ -95,10 +95,6 @@ int main(int argc, char** argv) {
     // Print matrices for verification
     print_matrices(matrices, rank);
 
-    // Prepare MPI I/O
-    MPI_File file;
-    MPI_File_open(MPI_COMM_WORLD, "matrices_compressed.bin", MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &file);
-
     int thread_matrix_sizes[NUM_THREADS];
     int thread_offsets[NUM_THREADS];
 
@@ -137,8 +133,28 @@ int main(int argc, char** argv) {
     }
 
     // Get the offset for each thread
-    MPI_Exscan_omp(thread_matrix_sizes, thread_offsets, &first_thread_recvbuf, MPI_COMM_WORLD);
+    printf("\nExscan results for process %d:\n", rank);
+    int prev_thread_send = 0;
+    #pragma omp parallel
+    {
+            #pragma omp for ordered
+            for(int i = 0; i < omp_get_num_threads(); i++){
+                # pragma omp ordered
+                {
+                    int thread_send = thread_matrix_sizes[i];
+                    MPI_Exscan_omp(thread_send, &prev_thread_send, thread_offsets, first_thread_recvbuf, MPI_COMM_WORLD);
+                    printf("Process: %d Thread %d: Sent: %d, Partial Reduction: %d\n",rank, i, thread_send, thread_offsets[i]);
+                }
+            }
+    }
 
+    // Get the offset for each thread
+    //MPI_Exscan_omp(thread_matrix_sizes, thread_offsets, &first_thread_recvbuf, MPI_COMM_WORLD);
+
+    // Prepare MPI I/O
+    MPI_File file;
+    MPI_File_open(MPI_COMM_WORLD, "matrices_compressed.bin", MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &file);
+    
     // Write each thread's compressed matrix to the binary file
     #pragma omp parallel
     {

@@ -8,6 +8,11 @@
 
 # define NUM_THREADS 4
 
+/*
+Inter thread communication in an MPI process 
+is done using global arrays thread_send and thread_sum, that all threads can access. 
+*/
+
 int main(int argc, char** argv)
 {
     int rank, size;
@@ -20,11 +25,8 @@ int main(int argc, char** argv)
 
     omp_set_num_threads(NUM_THREADS);
 
-    // Initialize the send array of ints with the size of the number of threads
-    int *thread_send = (int *) malloc(omp_get_num_threads() * sizeof(int));
-
-    // Initialize the receive array of ints with the size of the number of threads
-    int *thread_sum = (int *) malloc(omp_get_num_threads() * sizeof(int));
+    // Initialize the global sum array with the size of the number of threads
+    int thread_sums[NUM_THREADS];
 
     // Receive buffer for the first thread of the MPI process
     int first_thread_recvbuf;
@@ -39,21 +41,21 @@ int main(int argc, char** argv)
         MPI_Recv(&first_thread_recvbuf, 1, MPI_INT, rank-1, 0, MPI_COMM_WORLD, &status);
     }
 
-    // Calculate some values for each thread to send
-    #pragma omp parallel
-    {
-        int thread_id = omp_get_thread_num();
-
-        // Calculate the starting value for this MPI process based on its rank.
-        int start = rank * omp_get_num_threads() + 1;
-        thread_send[thread_id] = start + thread_id;
-    }
-
-    MPI_Exscan_omp(thread_send, thread_sum, &first_thread_recvbuf, MPI_COMM_WORLD);
-
-    free(thread_send);
-    free(thread_sum);
-
+   printf("\nExscan results for process %d:\n", rank);
+   int prev_thread_send = 0;
+   #pragma omp parallel
+   {
+        #pragma omp for ordered
+        for(int i = 0; i < omp_get_num_threads(); i++){
+            # pragma omp ordered
+            {
+                int thread_id = omp_get_thread_num();
+                int thread_send = rank * omp_get_num_threads() + 1 + thread_id;
+                MPI_Exscan_omp(thread_send, &prev_thread_send, thread_sums, first_thread_recvbuf, MPI_COMM_WORLD);
+                printf("Process: %d Thread %d: Sent: %d, Partial Reduction: %d\n",rank, i, thread_send, thread_sums[i]);
+            }
+        }
+   }
     MPI_Finalize();
 
     return 0;
