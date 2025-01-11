@@ -17,7 +17,7 @@ void Exscan_pt2pt(int *sendbuf, int *recvbuf, MPI_Comm comm) {
         MPI_Recv(recvbuf, 1, MPI_INT, rank-1, 0, comm, &status);    
     }
     
-    // Calculate the current process' sum
+    // Calculate the current process' sum 
     int sum = *recvbuf + *sendbuf;
     
     if (rank < size - 1) {
@@ -33,12 +33,12 @@ int main(int argc, char** argv) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     
-    int sendbuf = rank + 1;
-    int recvbuf;
+    int send = rank + 1;
+    int total;
     
-    Exscan_pt2pt(&sendbuf, &recvbuf, MPI_COMM_WORLD);
+    Exscan_pt2pt(&send, &total, MPI_COMM_WORLD);
     
-    printf("Process %d: sendbuf = %d, recvbuf = %d\n", rank, sendbuf, recvbuf);
+    printf("Process %d: Sent = %d, Partial Reduction = %d\n", rank, send, total);
     
     MPI_Finalize();
     return 0;
