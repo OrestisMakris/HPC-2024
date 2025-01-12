@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
     create_random_matrices(matrices, rank, NUM_THREADS, N);
 
     // Print matrices for verification
-    print_matrices(matrices, rank, NUM_THREADS, N);
+    //print_matrices(matrices, rank, NUM_THREADS, N);
 
     int thread_matrix_sizes[NUM_THREADS];
     int thread_offsets[NUM_THREADS];
@@ -121,9 +121,6 @@ int main(int argc, char** argv) {
                 }
             }
     }
-
-    // Get the offset for each thread
-    //MPI_Exscan_omp(thread_matrix_sizes, thread_offsets, &first_thread_recvbuf, MPI_COMM_WORLD);
 
     // Prepare MPI I/O
     MPI_File file;

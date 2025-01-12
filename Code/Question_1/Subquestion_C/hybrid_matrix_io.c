@@ -44,7 +44,7 @@ int main(int argc, char** argv)
     create_random_matrices(matrices, rank, NUM_THREADS, N);
 
     // Print matrices for verification
-    print_matrices(matrices, rank, NUM_THREADS, N);
+    //print_matrices(matrices, rank, NUM_THREADS, N);
 
     // Prepare MPI I/O
     MPI_File file;

@@ -7,8 +7,8 @@
 #include "../headers/question1_headers.h"
 
 /*
-Inter thread communication in an MPI process 
-is done using a global array thread_sums, that all threads can access. 
+Inter thread communication in an MPI process is done using the global pointer prev_thread_send 
+and each thread contibutes to the global sum array thread_sums.
 */
 
 int main(int argc, char** argv)
