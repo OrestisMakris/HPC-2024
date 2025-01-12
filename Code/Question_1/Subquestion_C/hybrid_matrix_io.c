@@ -6,55 +6,7 @@
 
 #include "../headers/question1_headers.h"
 
-# define NUM_THREADS 4
 # define N 3 // Matrix size is N x N x N
-
-void print_matrices(int**** matrices, int rank){
-    // Print matrices for verification
-    for (int t = 0; t < NUM_THREADS; t++) {
-        printf("Process %d:\n", rank);
-        printf("Matrix for thread %d:\n", t);
-        for (int i = 0; i < N; i++) {
-            for (int j = 0; j < N; j++) {
-                for (int k = 0; k < N; k++) {
-                    printf("%d ", matrices[t][i][j][k]);
-                }
-                printf("\n");
-            }
-            printf("\n");
-        }
-    }
-}
-
-void create_random_matrices(int ****matrices, int rank){
-    int thread_id, i, j, k;
-
-    #pragma omp parallel private(thread_id, i, j, k)
-    {
-        // Allocate memory for this thread's matrix
-        thread_id = omp_get_thread_num();
-        unsigned int seed = rank * NUM_THREADS + 1 + thread_id; // Unique seed for each process's thread
-
-        matrices[thread_id] = (int ***)malloc(N * sizeof(int **));
-        for (i = 0; i < N; i++) {
-            matrices[thread_id][i] = (int **)malloc(N * sizeof(int *));
-            for (j = 0; j < N; j++) {
-                matrices[thread_id][i][j] = (int *)malloc(N * sizeof(int));
-            }
-        }
-
-        // Initialize the matrix with random values
-        for (i = 0; i < N; i++) {
-            for (j = 0; j < N; j++) {
-                for (k = 0; k < N; k++) {
-                    matrices[thread_id][i][j][k] = rand_r(&seed) % 100; // Random number between 0 and 99
-                }
-            }
-        }
-    }
-
-}
-    
 
 int main(int argc, char** argv)
 {
@@ -66,15 +18,33 @@ int main(int argc, char** argv)
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
+    // Check and parse command-line arguments for NUM_THREADS
+    if (argc < 2) {
+        if (rank == 0) {
+            fprintf(stderr, "Usage: %s <num_threads>\n", argv[0]);
+        }
+        MPI_Finalize();
+        return EXIT_FAILURE;
+    }
+
+    int NUM_THREADS = atoi(argv[1]);
+    if (NUM_THREADS <= 0) {
+        if (rank == 0) {
+            fprintf(stderr, "Error: Number of threads must be a positive integer.\n");
+        }
+        MPI_Finalize();
+        return EXIT_FAILURE;
+    }
+
     omp_set_num_threads(NUM_THREADS);
 
     // Allocate memory for the matrices array
     int ****matrices = (int ****)malloc(NUM_THREADS * sizeof(int ***)); 
 
-    create_random_matrices(matrices, rank);
+    create_random_matrices(matrices, rank, NUM_THREADS, N);
 
     // Print matrices for verification
-    print_matrices(matrices, rank);
+    print_matrices(matrices, rank, NUM_THREADS, N);
 
     // Prepare MPI I/O
     MPI_File file;
@@ -98,7 +68,10 @@ int main(int argc, char** argv)
     }
 
     // Get the offset for each thread
-    printf("\nExscan results for process %d:\n", rank);
+    if(rank == 0){
+        printf("\nExscan results:\n");
+    }
+
     int prev_thread_send = 0;
     #pragma omp parallel
     {

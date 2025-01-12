@@ -6,11 +6,9 @@
 
 #include "../headers/question1_headers.h"
 
-# define NUM_THREADS 4
-
 /*
 Inter thread communication in an MPI process 
-is done using global arrays thread_send and thread_sum, that all threads can access. 
+is done using a global array thread_sums, that all threads can access. 
 */
 
 int main(int argc, char** argv)
@@ -22,6 +20,24 @@ int main(int argc, char** argv)
 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    // Check and parse command-line arguments for NUM_THREADS
+    if (argc < 2) {
+        if (rank == 0) {
+            fprintf(stderr, "Usage: %s <num_threads>\n", argv[0]);
+        }
+        MPI_Finalize();
+        return EXIT_FAILURE;
+    }
+
+    int NUM_THREADS = atoi(argv[1]);
+    if (NUM_THREADS <= 0) {
+        if (rank == 0) {
+            fprintf(stderr, "Error: Number of threads must be a positive integer.\n");
+        }
+        MPI_Finalize();
+        return EXIT_FAILURE;
+    }
 
     omp_set_num_threads(NUM_THREADS);
 

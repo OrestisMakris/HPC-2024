@@ -1,10 +1,7 @@
 CC = mpicc
 CFLAGS = -fopenmp -Wall -O2 -I../headers
 
-all: hybrid_test hybrid_exscan
-
-hybrid_test: hybrid_test.c
-	$(CC) $(CFLAGS) -o $@ $<
+all: hybrid_exscan
 
 hybrid_exscan: hybrid_exscan.c ../headers/mpi_exscan_omp.o
 	$(CC) $(CFLAGS) -o $@ $^
