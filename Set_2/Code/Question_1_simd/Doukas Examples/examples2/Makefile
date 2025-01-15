@@ -25,7 +25,7 @@ saxpy_sse: saxpy_sse.c
 	$(CC) $(CFLAGS) -O3 -msse4 saxpy_sse.c -o saxpy_sse
 
 saxpy_avx: saxpy_avx.c
-	$(CC) $(CFLAGS) -O3 -mavx saxpy_avx.c -o saxpy_avx
+	$(CC) $(CFLAGS) -O3 -mavx saxpy_avx.c  -o saxpy_avx
 
 sdot_sse: sdot_sse.c
 	$(CC) $(CFLAGS) -O3 -msse4 sdot_sse.c -o sdot_sse
