@@ -45,25 +45,39 @@ double get_wtime()
 
 void check_error(const double tol, float ref[], float val[], const int N)
 {
-	static const int verbose = 0;
+    static const int verbose = 0;
+    int failed = 0;
 
-	for(int i=0; i<N; ++i)
-	{
-		assert(!isnan(ref[i]));
-		assert(!isnan(val[i]));
+    for (int i = 0; i < N; ++i)
+    {
+        assert(!isnan(ref[i]));
+        assert(!isnan(val[i]));
 
-		const double err = ref[i] - val[i];
-		const double relerr = err/fmaxf(FLT_EPSILON, fmaxf(fabs(val[i]), fabs(ref[i])));
+        const double err = ref[i] - val[i];
+        const double relerr = err / fmaxf(FLT_EPSILON, fmaxf(fabs(val[i]), fabs(ref[i])));
 
-		if (verbose) printf("+%1.1e,", relerr);
+        if (verbose) printf("+%1.1e,", relerr);
 
-		if (fabs(relerr) >= tol && fabs(err) >= tol)
-			printf("\n%d: %e %e -> %e %e\n", i, ref[i], val[i], err, relerr);
+        if (fabs(relerr) >= tol && fabs(err) >= tol)
+        {
+            // Report the failing index with error information
+            printf("\nERROR: %d: ref = %e, val = %e, abs_err = %e, rel_err = %e\n",
+                   i, ref[i], val[i], err, relerr);
+            failed = 1;
+        }
 
-		assert(fabs(relerr) < tol || fabs(err) < tol);
-	}
+        // Assert that the error is within tolerance
+        assert(fabs(relerr) < tol || fabs(err) < tol);
+    }
 
-	if (verbose) printf("\t");
+    if (verbose) printf("\t");
+
+    // If any error was found, terminate the program
+    if (failed)
+    {
+        printf("Accuracy check failed! Please check the error details above.\n");
+        exit(EXIT_FAILURE);
+    }
 }
 
 
@@ -82,8 +96,17 @@ void benchmark(int argc, char *argv[], const int NENTRIES_, const int NTIMES, co
 	float * const gold = myalloc(NENTRIES, verbose);
 	float * const result = myalloc(NENTRIES, verbose);
 
-	weno_minus_reference(a, b, c, d, e, gold, NENTRIES);
-	weno_minus_reference(a, b, c, d, e, result, NENTRIES);
+ // Time for weno_minus_reference for gold
+    double start_time = get_wtime();
+    weno_minus_reference(a, b, c, d, e, gold, NENTRIES);
+    double end_time = get_wtime();
+    printf("Time for weno_minus_reference (gold): %.6f seconds\n", end_time - start_time);
+
+    // Time for weno_minus_reference for result
+    start_time = get_wtime();
+    weno_minus_reference(a, b, c, d, e, result, NENTRIES);
+    end_time = get_wtime();
+    printf("Time for weno_minus_reference (result): %.6f seconds\n", end_time - start_time);
 
 	const double tol = 1e-5;
 	printf("minus: verifying accuracy with tolerance %.5e...", tol);
@@ -104,9 +127,13 @@ int main (int argc, char *  argv[])
 	printf("Hello, weno benchmark!\n");
 	const int debug = 1;
 
+	int verbose = 0;
+	int NENTRIES = 1000e6;
+	int NTIMES = 1;
+
 	if (debug)
 	{
-		benchmark(argc, argv, 4, 1, 1, "debug");
+		benchmark(argc, argv, NENTRIES, NTIMES, verbose, "debug");
 		return 0;
 	}
 
