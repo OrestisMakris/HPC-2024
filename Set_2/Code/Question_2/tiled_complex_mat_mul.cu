@@ -1,3 +1,5 @@
+/*Complex Matrix multiplication on GPU using shared memory*/
+
 #include <stdlib.h>
 #include "helper.h"
 
