@@ -134,7 +134,7 @@ int main (int argc, char *  argv[])
 	const int debug = 1;
 
 	int verbose = 0;
-	int NENTRIES = 1000e6;
+	int NENTRIES = 2000e6;
 	int NTIMES = 1;
 
   // Determine which implementation to use based on binary name
