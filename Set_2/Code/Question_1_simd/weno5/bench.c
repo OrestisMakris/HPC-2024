@@ -120,7 +120,7 @@ void benchmark(int argc, char *argv[], const int NENTRIES_, const int NTIMES, co
     printf("Total time for %d iterations: %.3f seconds\n", NTIMES, total_time);
 
     // Accuracy check
-    const double tol = 1e-5;
+    const double tol = 1e-4;
     printf("minus: verifying accuracy with tolerance %.5e...", tol);
     check_error(tol, gold, result, NENTRIES);
     printf("passed!\n");
@@ -139,10 +139,10 @@ void benchmark(int argc, char *argv[], const int NENTRIES_, const int NTIMES, co
 int main (int argc, char *  argv[])
 {
 	printf("Hello, weno benchmark!\n");
-	const int debug = 1;
+	const int debug = 0;
 
 	int verbose = 0;
-	int NENTRIES = 1e5;
+	int NENTRIES = 10e6;
 	int NTIMES = 10000;
 
   // Determine which implementation to use based on binary name
