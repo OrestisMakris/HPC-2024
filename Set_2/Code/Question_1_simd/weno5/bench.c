@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <math.h>
+#include <omp.h>
 #include <sys/time.h>
 
 #ifndef WENOEPS
@@ -80,19 +81,23 @@ void check_error(const double tol, float ref[], float val[], const int N)
     }
 }
 
+// Function pointer type for WENO implementations
+typedef void (*weno_func)(const float * const, const float * const,
+                         const float * const, const float * const,
+                         const float * const, float * const, const int);
 
-void benchmark(int argc, char *argv[], const int NENTRIES_, const int NTIMES, const int verbose, char *benchmark_name)
+void benchmark(int argc, char *argv[], const int NENTRIES_, const int NTIMES, const int verbose, char *benchmark_name, weno_func func)
 {
 	const int NENTRIES = 4 * (NENTRIES_ / 4);
 
-	printf("nentries set to %e\n", (float)NENTRIES);
+	printf("Testing with %e entries\n", (float)NENTRIES);
 
 	float * const a = myalloc(NENTRIES, verbose);
 	float * const b = myalloc(NENTRIES, verbose);
 	float * const c = myalloc(NENTRIES, verbose);
 	float * const d = myalloc(NENTRIES, verbose);
 	float * const e = myalloc(NENTRIES, verbose);
-	float * const f = myalloc(NENTRIES, verbose);
+	//float * const f = myalloc(NENTRIES, verbose);
 	float * const gold = myalloc(NENTRIES, verbose);
 	float * const result = myalloc(NENTRIES, verbose);
 
@@ -102,11 +107,11 @@ void benchmark(int argc, char *argv[], const int NENTRIES_, const int NTIMES, co
     double end_time = get_wtime();
     printf("Time for weno_minus_reference (gold): %.6f seconds\n", end_time - start_time);
 
-    // Time for weno_minus_reference for result
+    // Time for different implementations
     start_time = get_wtime();
-    weno_minus_reference(a, b, c, d, e, result, NENTRIES);
+    func(a, b, c, d, e, result, NENTRIES);
     end_time = get_wtime();
-    printf("Time for weno_minus_reference (result): %.6f seconds\n", end_time - start_time);
+    printf("%s implementation: %.3f seconds\n", benchmark_name, end_time - start_time);
 
 	const double tol = 1e-5;
 	printf("minus: verifying accuracy with tolerance %.5e...", tol);
@@ -122,6 +127,7 @@ void benchmark(int argc, char *argv[], const int NENTRIES_, const int NTIMES, co
 	free(result);
 }
 
+
 int main (int argc, char *  argv[])
 {
 	printf("Hello, weno benchmark!\n");
@@ -131,22 +137,52 @@ int main (int argc, char *  argv[])
 	int NENTRIES = 1000e6;
 	int NTIMES = 1;
 
+  // Determine which implementation to use based on binary name
+    weno_func implementation = weno_minus_reference;
+    char *impl_name = "Reference";
+    
+    const char *binary_name = strrchr(argv[0], '/');
+    if (binary_name == NULL) {
+        binary_name = argv[0];
+    } else {
+        binary_name++; // Skip the '/'
+    }
+    
+    if (strcmp(binary_name, "bench_auto") == 0) {
+        implementation = weno_minus_auto;
+        impl_name = "Auto-vectorized";
+    } else if (strcmp(binary_name, "bench_omp") == 0) {
+        implementation = weno_minus_omp;
+        impl_name = "OpenMP SIMD";
+    // } else if (strcmp(binary_name, "bench_simd") == 0) {
+    //     implementation = weno_minus_avx;
+    //     impl_name = "AVX";
+    }
+	
+
+	if (strcmp(binary_name, "bench_builtin") == 0) {
+    implementation = weno_minus_builtin;
+    impl_name = "Builtin-aligned";
+	}
+
+	printf("Running %s implementation\n", impl_name);
+
 	if (debug)
 	{
-		benchmark(argc, argv, NENTRIES, NTIMES, verbose, "debug");
+		benchmark(argc, argv, NENTRIES, NTIMES,verbose, impl_name, implementation);
 		return 0;
 	}
 
 	/* performance on cache hits */
 	{
-		const double desired_kb =  16 * 4 * 0.5; /* we want to fill 50% of the dcache */
+		//const double desired_kb =  16 * 4 * 0.5; /* we want to fill 50% of the dcache */
 		const int nentries =  16 * (int)(pow(32 + 6, 2) * 4);//floor(desired_kb * 1024. / 7 / sizeof(float));
 		const int ntimes = (int)floor(2. / (1e-7 * nentries));
 
 		for(int i=0; i<4; ++i)
 		{
 			printf("*************** PEAK-LIKE BENCHMARK (RUN %d) **************************\n", i);
-			benchmark(argc, argv, nentries, ntimes, 0, "cache");
+			benchmark(argc, argv, nentries, ntimes, 0, impl_name, implementation);
 		}
 	}
 
@@ -158,7 +194,7 @@ int main (int argc, char *  argv[])
 		for(int i=0; i<4; ++i)
 		{
 			printf("*************** STREAM-LIKE BENCHMARK (RUN %d) **************************\n", i);
-			benchmark(argc, argv, nentries, 1, 0, "stream");
+			benchmark(argc, argv, nentries, 1, 0, impl_name, implementation);
 		}
 	}
 
