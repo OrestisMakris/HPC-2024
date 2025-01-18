@@ -8,14 +8,20 @@ CFLAGS_AUTO= -Wall -march=native -Wno-unused-value -O3 -ftree-vectorize  -ftree-
 CFLAGS_BUILTIN= -Wall -march=native -Wno-unused-value -O3 -ftree-vectorize  -ftree-vectorizer-verbose=5 #-ffast-math -mfma
 
 # OpenMP flags
-CFLAGS_OMP = -O3 -fopenmp -Wall -march=native -Wno-unused-value -O3 -ftree-vectorize -fopt-info
+CFLAGS_OMP = -O3 -fopenmp -Wall -march=native -Wno-unused-value -O3 -ftree-vectorize -fopt-info -ffast-math
 
 # OpenMP optim flags
 CFLAGS_OMP_OPTIM = -O3 -fopenmp -Wall -march=native -Wno-unused-value -O3 -ftree-vectorize -fopt-info -ffast-math
 
+# Vectorization SIMD flags for AVX implementation
+CFLAGS_AVX= -O3 -mavx -msse4 -mfma -lm -Wno-unused-result -fopt-info-vec -march=native -Wall 
+
+# Vectorization SIMD flags for SSE implementation
+CFLAGS_SSE= -O3 -msse4 -lm -Wno-unused-result -fopt-info-vec -march=native -Wall 
+
 LIBS=-lm
 
-all: bench bench_auto bench_builtin bench_omp bench_omp_optim
+all: bench bench_auto bench_builtin bench_omp bench_omp_optim bench_avx bench_sse
 
 bench: bench.c weno.h
 	$(CC) $(CFLAGS) -o bench bench.c $(LIBS)
@@ -32,5 +38,11 @@ bench_omp: bench.c weno.h
 bench_omp_optim: bench.c weno.h
 	$(CC) $(CFLAGS_OMP_OPTIM) -o bench_omp_optim bench.c $(LIBS)
 
+bench_avx: bench.c weno.h
+	$(CC) $(CFLAGS_AVX) -o bench_avx bench.c $(LIBS)
+
+bench_sse: bench.c weno.h
+	$(CC) $(CFLAGS_SSE) -msse4 -o bench_sse bench.c $(LIBS)
+
 clean:
-	rm -f bench bench_auto bench_builtin bench_omp bench_omp_optim
+	rm -f bench bench_auto bench_builtin bench_omp bench_omp_optim bench_avx bench_sse

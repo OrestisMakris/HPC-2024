@@ -88,43 +88,51 @@ typedef void (*weno_func)(const float * const, const float * const,
 
 void benchmark(int argc, char *argv[], const int NENTRIES_, const int NTIMES, const int verbose, char *benchmark_name, weno_func func)
 {
-	const int NENTRIES = 4 * (NENTRIES_ / 4);
+    const int NENTRIES = 4 * (NENTRIES_ / 4);
+    printf("Testing with %e entries\n", (float)NENTRIES);
 
-	printf("Testing with %e entries\n", (float)NENTRIES);
+    // Memory allocation
+    float * const a = myalloc(NENTRIES, verbose);
+    float * const b = myalloc(NENTRIES, verbose);
+    float * const c = myalloc(NENTRIES, verbose);
+    float * const d = myalloc(NENTRIES, verbose);
+    float * const e = myalloc(NENTRIES, verbose);
+    float * const gold = myalloc(NENTRIES, verbose);
+    float * const result = myalloc(NENTRIES, verbose);
 
-	float * const a = myalloc(NENTRIES, verbose);
-	float * const b = myalloc(NENTRIES, verbose);
-	float * const c = myalloc(NENTRIES, verbose);
-	float * const d = myalloc(NENTRIES, verbose);
-	float * const e = myalloc(NENTRIES, verbose);
-	//float * const f = myalloc(NENTRIES, verbose);
-	float * const gold = myalloc(NENTRIES, verbose);
-	float * const result = myalloc(NENTRIES, verbose);
-
- // Time for weno_minus_reference for gold
+    // Time for weno_minus_reference for gold
     double start_time = get_wtime();
     weno_minus_reference(a, b, c, d, e, gold, NENTRIES);
     double end_time = get_wtime();
     printf("Time for weno_minus_reference (gold): %.6f seconds\n", end_time - start_time);
 
-    // Time for different implementations
-    start_time = get_wtime();
-    func(a, b, c, d, e, result, NENTRIES);
-    end_time = get_wtime();
-    printf("%s implementation: %.3f seconds\n", benchmark_name, end_time - start_time);
+    // Total time accumulated across NTIMES iterations
+    double total_time = 0.0;
+    for (int i = 0; i < NTIMES; ++i)
+    {
+        start_time = get_wtime();
+        func(a, b, c, d, e, result, NENTRIES);
+        end_time = get_wtime();
+        total_time += (end_time - start_time); // Accumulate time for each run
+    }
 
-	const double tol = 1e-5;
-	printf("minus: verifying accuracy with tolerance %.5e...", tol);
-	check_error(tol, gold, result, NENTRIES);
-	printf("passed!\n");
+    // Report total time for all NTIMES iterations
+    printf("Total time for %d iterations: %.3f seconds\n", NTIMES, total_time);
 
-	free(a);
-	free(b);
-	free(c);
-	free(d);
-	free(e);
-	free(gold);
-	free(result);
+    // Accuracy check
+    const double tol = 1e-5;
+    printf("minus: verifying accuracy with tolerance %.5e...", tol);
+    check_error(tol, gold, result, NENTRIES);
+    printf("passed!\n");
+
+    // Free memory
+    free(a);
+    free(b);
+    free(c);
+    free(d);
+    free(e);
+    free(gold);
+    free(result);
 }
 
 
@@ -134,8 +142,8 @@ int main (int argc, char *  argv[])
 	const int debug = 1;
 
 	int verbose = 0;
-	int NENTRIES = 2000e6;
-	int NTIMES = 1;
+	int NENTRIES = 1e5;
+	int NTIMES = 10000;
 
   // Determine which implementation to use based on binary name
     weno_func implementation = weno_minus_reference;
@@ -143,7 +151,6 @@ int main (int argc, char *  argv[])
     
     const char *binary_name = strrchr(argv[0], '/');
     if (binary_name == NULL) {
-        binary_name = argv[0];
     } else {
         binary_name++; // Skip the '/'
     }
@@ -154,9 +161,9 @@ int main (int argc, char *  argv[])
     } else if (strcmp(binary_name, "bench_omp") == 0) {
         implementation = weno_minus_omp;
         impl_name = "OpenMP SIMD";
-    // } else if (strcmp(binary_name, "bench_simd") == 0) {
-    //     implementation = weno_minus_avx;
-    //     impl_name = "AVX";
+    } else if (strcmp(binary_name, "bench_avx") == 0) {
+        implementation = weno_minus_avx;
+    	impl_name = "AVX";
     }
 	
 
@@ -174,6 +181,12 @@ int main (int argc, char *  argv[])
 	implementation = weno_minus_omp_optimized;
 	impl_name = "OpenMP SIMD Optimized";
 	}
+
+	if (strcmp(binary_name, "bench_sse") == 0) {
+	implementation = weno_minus_sse;
+	impl_name = "SSE";
+	}
+
 
 	printf("Running %s implementation\n", impl_name);
 
