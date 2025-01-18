@@ -52,6 +52,7 @@ void weno_minus_auto(const float * const a, const float * const b, const float *
 	}
 }
 
+
 void weno_minus_unrolled(const float * const a, const float * const b, const float * const c,
                          const float * const d, const float * const e, float * const out,
                          const int NENTRIES)
