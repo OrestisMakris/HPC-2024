@@ -165,6 +165,16 @@ int main (int argc, char *  argv[])
     impl_name = "Builtin-aligned";
 	}
 
+	// if (strcmp(binary_name, "bench_unrolled") == 0) {
+	// implementation = weno_minus_unrolled;
+	// impl_name = "Unrolled";
+	// }
+
+	if (strcmp(binary_name, "bench_omp_optimized") == 0) {
+	implementation = weno_minus_omp_optimized;
+	impl_name = "OpenMP SIMD Optimized";
+	}
+
 	printf("Running %s implementation\n", impl_name);
 
 	if (debug)

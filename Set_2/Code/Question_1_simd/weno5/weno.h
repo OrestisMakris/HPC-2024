@@ -100,12 +100,35 @@ void weno_minus_omp(const float * const a, const float * const b, const float * 
                    const float * const d, const float * const e, float * const out,
                    const int NENTRIES)
 {
-    #pragma omp simd
+    #pragma omp parallel for simd aligned(a, b, c, d, e, out: 32) schedule(static)
     for (int i = 0; i < NENTRIES; ++i) {
         out[i] = weno_minus_core(a[i], b[i], c[i], d[i], e[i]);
     }
 }
 
+
+void weno_minus_omp_optimized(const float * restrict a, const float * restrict b, const float * restrict c,
+                              const float * restrict d, const float * restrict e, float * restrict out,
+                              const int NENTRIES)
+{
+    // Ensure NENTRIES is a multiple of vector length for efficient SIMD
+    const int vector_width = 8; // For AVX, change to 16 for AVX-512
+    const int simd_limit = NENTRIES / vector_width * vector_width;
+
+    #pragma omp parallel for simd aligned(a, b, c, d, e, out: 32) schedule(static)
+    for (int i = 0; i < simd_limit; i += vector_width) {
+        #pragma omp simd aligned(a, b, c, d, e, out: 32)
+        for (int j = 0; j < vector_width; ++j) {
+            int idx = i + j;
+            out[idx] = weno_minus_core(a[idx], b[idx], c[idx], d[idx], e[idx]);
+        }
+    }
+
+    // Process remaining entries if NENTRIES is not a multiple of vector width
+    for (int i = simd_limit; i < NENTRIES; ++i) {
+        out[i] = weno_minus_core(a[i], b[i], c[i], d[i], e[i]);
+    }
+}
 
 
 // // AVX implementation
