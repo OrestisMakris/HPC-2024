@@ -3,7 +3,7 @@
 #include <math.h>
 #include <omp.h>
 
-#define ARRAY_SIZE 1000000  // Large number of iterations for heavy computation
+#define ARRAY_SIZE 10000  // Large number of iterations for heavy computation
 #define BLOCK_SIZE 1000     // Grain size or block size for tasks
 
 //-------------------------
@@ -16,22 +16,59 @@ double work(int i) {
     }
     return result;
 }
-
-//-------------------------
+//------------------------
 // Function Prototypes
 //-------------------------
 void initialize_serial(double *A, int size);
+void initialize_tasks(double *A, int size);
+void initialize_threads(double *A, int size);
 void initialize_tasks_optimized(double *A, int size, int block_size);
 void initialize_tasks_taskloop(double *A, int size, int block_size);
 double compute_sum_tasks(int size, int block_size);
 double max_difference(double *A, double *B, int size);
-
-//-------------------------
+//------------------------
 // Serial implementation
 //-------------------------
 void initialize_serial(double *A, int size) {
     for (int i = 0; i < size; i++) {
         A[i] = work(i);
+    }
+}
+
+// OpenMP threads implementation using parallel for
+//-------------------------
+// OpenMP Threads Implementation:
+// Parallelize the loop using 'parallel for' directive.
+// The 'schedule' clause specifies the dynamic scheduling policy with chunk size 2.
+//-------------------------
+void initialize_threads(double *A, int size) {
+    #pragma omp parallel for schedule(dynamic, 2)
+    for (int i = 0; i < size; i++) {
+        A[i] = work(i);
+    }
+}
+
+// OpenMP tasks implementation: one task per iteration
+//-------------------------
+// OpenMP Tasks Implementation:
+// Create a task for each iteration of the loop to parallelize the work.
+// The 'firstprivate' clause ensures that each task has its own copy of the loop index.
+//-------------------------
+
+void initialize_tasks(double *A, int size) {
+    #pragma omp parallel
+    {
+        #pragma omp single
+        {
+            for (int i = 0; i < size; i++) {
+                #pragma omp task firstprivate(i)
+                {
+                    A[i] = work(i);
+                }
+            }
+            // Wait for all tasks to complete
+            #pragma omp taskwait
+        }
     }
 }
 
@@ -71,7 +108,8 @@ void initialize_tasks_taskloop(double *A, int size, int block_size) {
     {
         #pragma omp single nowait
         {
-            #pragma omp taskloop grainsize(block_size) untied
+            #pragma omp taskloop grainsize(block_size)
+
             for (int i = 0; i < size; i++) {
                 A[i] = work(i);
             }
@@ -132,6 +170,24 @@ int main() {
     time_serial = end - start;
     printf("Serial execution time: %f seconds\n", time_serial);
 
+    //--- OpenMP Threads Execution ---
+    start = omp_get_wtime();
+    initialize_threads(A_taskloop, ARRAY_SIZE);
+    end = omp_get_wtime();
+    double time_threads = end - start;
+    printf("Threads execution time: %f seconds\n", time_threads);
+    double diff_threads = max_difference(A_serial, A_taskloop, ARRAY_SIZE);
+    printf("Threads max difference vs serial: %e\n", diff_threads);
+    
+    //--- OpenMP Task Execution ---
+    start = omp_get_wtime();
+    initialize_tasks(A_taskloop, ARRAY_SIZE);
+    end = omp_get_wtime();
+    time_taskloop = end - start;
+    printf("Task execution time: %f seconds\n", time_taskloop);
+    double diff_task = max_difference(A_serial, A_taskloop, ARRAY_SIZE);
+    printf("Task max difference vs serial: %e\n", diff_task);
+
     //--- OpenMP Taskloop Execution ---
     start = omp_get_wtime();
     initialize_tasks_taskloop(A_taskloop, ARRAY_SIZE, BLOCK_SIZE);
@@ -156,7 +212,6 @@ int main() {
     end = omp_get_wtime();
     time_sum = end - start;
     printf("Tasks reduction (global sum) execution time: %f seconds, sum = %f\n", time_sum, sum_tasks);
-
     // Cleanup
     free(A_serial);
     free(A_taskloop);
