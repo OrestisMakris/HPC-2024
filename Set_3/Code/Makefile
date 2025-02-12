@@ -3,8 +3,9 @@ CC = gcc
 
 # Compiler Flags
 # CFLAGS = -fopenmp -foffload=disable -fcf-protection=none
-CFLAGS = -fopenmp -foffload=nvptx-none -march=native -fcf-protection=none
+# CFLAGS = -fopenmp -foffload=nvptx-none -march=native -fcf-protection=none
 # CFLAGS = -fopenmp -foffload=nvptx-none -fcf-protection=none 
+CFLAGS = -fopenmp -lgomp -foffload=nvptx-none -lcuda -foffload="-misa=sm_35" -fcf-protection=none -fno-stack-protector
 
 # Build Targets
 all:complex_mat_mul 

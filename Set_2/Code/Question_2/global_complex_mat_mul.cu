@@ -7,13 +7,13 @@
 
 #define THREADS_PER_BLOCK 16
 
-__global__ void compute_E(float* A, float* B, float* C, float* D, float* E, int N) {
+__global__ void compute_E(int* A, int* B, int* C, int* D, int* E, int N) {
     // Calculate the global row and column for each thread
     int row = blockIdx.y * blockDim.y + threadIdx.y;
     int col = blockIdx.x * blockDim.x + threadIdx.x;
 
-    float sum_AC = 0.0f;
-    float sum_BD = 0.0f;
+    int sum_AC = 0;
+    int sum_BD = 0;
 
     // Perform computation directly from global memory
     if (row < N && col < N) {
@@ -25,13 +25,13 @@ __global__ void compute_E(float* A, float* B, float* C, float* D, float* E, int 
     }
 }
 
-__global__ void compute_F(float* A, float* B, float* C, float* D, float* F, int N) {
+__global__ void compute_F(int* A, int* B, int* C, int* D, int* F, int N) {
     // Calculate the global row and column for each thread
     int row = blockIdx.y * blockDim.y + threadIdx.y;
     int col = blockIdx.x * blockDim.x + threadIdx.x;
 
-    float sum_AD = 0.0f;
-    float sum_BC = 0.0f;
+    int sum_AD = 0;
+    int sum_BC = 0;
 
     // Perform computation directly from global memory
     if (row < N && col < N) {
@@ -52,26 +52,26 @@ int main(int argc, char *argv[]) {
     // Set square matrix dimension (NxN)
     int N = atoi(argv[1]);
 
-    size_t size = N * N * sizeof(float);
+    size_t size = N * N * sizeof(int);
 
     // Allocate host memory
-    float *A = (float *)malloc(size);
-    float *B = (float *)malloc(size);
-    float *C = (float *)malloc(size);
-    float *D = (float *)malloc(size);
-    float *E_cpu = (float *)malloc(size);
-    float *E_gpu = (float *)malloc(size);
-    float *F_cpu = (float *)malloc(size);
-    float *F_gpu = (float *)malloc(size);
+    int *A = (int *)malloc(size);
+    int *B = (int *)malloc(size);
+    int *C = (int *)malloc(size);
+    int *D = (int *)malloc(size);
+    int *E_cpu = (int *)malloc(size);
+    int *E_gpu = (int *)malloc(size);
+    int *F_cpu = (int *)malloc(size);
+    int *F_gpu = (int *)malloc(size);
 
     // Initialize matrices
-    initialize_matrix(A, N); // Ensure initialize_matrix is updated for float
+    initialize_matrix(A, N); // Ensure initialize_matrix is updated for int
     initialize_matrix(B, N);
     initialize_matrix(C, N);
     initialize_matrix(D, N);
 
     // Allocate device memory
-    float *d_A, *d_B, *d_C, *d_D, *d_E, *d_F;
+    int *d_A, *d_B, *d_C, *d_D, *d_E, *d_F;
     cudaMalloc(&d_A, size);
     cudaMalloc(&d_B, size);
     cudaMalloc(&d_C, size);

@@ -55,9 +55,10 @@ void verify_complex_mat_mul(float* A, float* B, float* C, float* D, float* E_cpu
     // End timing
     end = clock();
     double cpu_time = ((double)(end - start)) / CLOCKS_PER_SEC;
-    printf("CPU Execution time: %f s\n", cpu_time);
+    printf("CPU Execution time: %f seconds\n", cpu_time);
 
     // Verify results
+    printf("Verifying results...\n");
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
             if (fabs(E_cpu[i * N + j] - E_gpu[i * N + j]) > 1e-2) {

@@ -7,9 +7,12 @@ NVCC = nvcc
 NVCCFLAGS = -arch=sm_70 -O2
 
 # Build rules
-all: tiled_complex_mat_mul global_complex_mat_mul int_complex_mat_mul float_complex_mat_mul
+all: tiled_complex_mat_mul global_complex_mat_mul int_complex_mat_mul float_complex_mat_mul opt_tiled_complex_mat_mul
 
 tiled_complex_mat_mul: tiled_complex_mat_mul.cu
+	$(NVCC) $(NVCCFLAGS) -o $@ $<
+
+opt_tiled_complex_mat_mul: opt_tiled_complex_mat_mul.cu
 	$(NVCC) $(NVCCFLAGS) -o $@ $<
 
 global_complex_mat_mul: global_complex_mat_mul.cu
@@ -22,7 +25,7 @@ float_complex_mat_mul: float_complex_mat_mul.cu
 	$(NVCC) $(NVCCFLAGS) -o $@ $<
 
 clean:
-	rm -f tiled_complex_mat_mul global_complex_mat_mul int_complex_mat_mul float_complex_mat_mul
+	rm -f tiled_complex_mat_mul global_complex_mat_mul int_complex_mat_mul float_complex_mat_mul opt_tiled_complex_mat_mul
 
 # Phony targets
 .PHONY: all clean

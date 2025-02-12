@@ -1,10 +1,11 @@
 // Helper functions
 #ifndef HELPER_H
-#define MHELPER_H
+#define HELPER_H
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <math.h>
 
 // Function to initialize matrix with random integer values
 void initialize_matrix(int *matrix, int N) {
@@ -20,12 +21,24 @@ void initialize_matrix(float *matrix, int N) {
     }
 }
 
-// Function to print a matrix
+// Function to print an int matrix
 void print_matrix(const int* matrix, int N, const char* name) {
     printf("%s:\n", name);
     for (int i = 0; i < N; ++i) {
         for (int j = 0; j < N; ++j) {
             printf("%d ", matrix[i * N + j]);
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
+// Function to print a float matrix
+void print_matrix(const float* matrix, int N, const char* name) {
+    printf("%s:\n", name);
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < N; ++j) {
+            printf("%.2f ", matrix[i * N + j]);
         }
         printf("\n");
     }

@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <omp.h>
@@ -40,17 +39,14 @@ int main(int argc, char* argv[]) {
     print_matrix(D, N, "Matrix D");*/
 
 	// Compute E = AC - BD and F = AD + BC
-    omp_set_default_device(0);
-    printf("Using OpenMP Offloading: %s\n", omp_is_initial_device() ? "NO (CPU)" : "YES (GPU)");
-
 
     // Start timing the GPU execution
     double start = omp_get_wtime();
 
     #pragma omp target data map(to: A[0:N*N], B[0:N*N], C[0:N*N], D[0:N*N]) map(from: E_gpu[0:N*N], F_gpu[0:N*N])
     {
-        //#pragma omp target teams distribute parallel for collapse(2)
-        #pragma omp target parallel for
+        //#pragma omp target parallel for
+        #pragma omp target teams distribute parallel for collapse(2)
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N; j++) {
                 // Initialze temp dot product variables at index (i,j) for each matrix multiplication

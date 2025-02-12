@@ -1,20 +1,20 @@
 /*Complex Matrix multiplication on GPU using shared memory*/
-
+#include <cuda.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include "helper.h"
 
-#define THREADS_PER_BLOCK 16
+#define THREADS_PER_BLOCK 16 
 #define TILE_SIZE THREADS_PER_BLOCK
 
-__global__ void compute_E(float* A, float* B, float* C, float* D, float* E, int N){
+__global__ void compute_E(int* A, int* B, int* C, int* D, int* E, int N){
     // Allocate shared memory 
-    __shared__ float s_A[TILE_SIZE][TILE_SIZE];
-    __shared__ float s_B[TILE_SIZE][TILE_SIZE];
-    __shared__ float s_C[TILE_SIZE][TILE_SIZE];
-    __shared__ float s_D[TILE_SIZE][TILE_SIZE];
+    __shared__ int s_A[TILE_SIZE][TILE_SIZE];
+    __shared__ int s_B[TILE_SIZE][TILE_SIZE];
+    __shared__ int s_C[TILE_SIZE][TILE_SIZE];
+    __shared__ int s_D[TILE_SIZE][TILE_SIZE];
 
     // Calculate the global row and column for each thread 
-    // The row and column indices determine which element of the output matrix E the thread will compute.
     int row = blockIdx.y * blockDim.y + threadIdx.y;
     int col = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -22,34 +22,34 @@ __global__ void compute_E(float* A, float* B, float* C, float* D, float* E, int 
     int ty = threadIdx.y;
     int dim = blockDim.x;
 
-    float sum_AC = 0.0f;
-    float sum_BD = 0.0f;
+    int sum_AC = 0;
+    int sum_BD = 0;
 
     // Move the tile across the length of the grid 
-    for (int i = 0; i < (N + dim - 1) / dim; i++) { // Handle non-multiples of dim
+    for (int i = 0; i < (N + dim - 1) / dim; i++) {
         // Load dim x dim tiles into shared memory, with boundary checks
         if (row < N && (i * dim + tx) < N) {
             s_A[ty][tx] = A[row * N + i * dim + tx];
             s_B[ty][tx] = B[row * N + i * dim + tx];
         } else {
-            s_A[ty][tx] = 0.0f;
-            s_B[ty][tx] = 0.0f;
+            s_A[ty][tx] = 0;
+            s_B[ty][tx] = 0;
         }
         if (col < N && (i * dim + ty) < N) {
             s_C[ty][tx] = C[(i * dim + ty) * N + col];
             s_D[ty][tx] = D[(i * dim + ty) * N + col];
         } else {
-            s_C[ty][tx] = 0.0f;
-            s_D[ty][tx] = 0.0f;
+            s_C[ty][tx] = 0;
+            s_D[ty][tx] = 0;
         }
-        __syncthreads(); // Ensures all threads have completed loading their respective tiles
+        __syncthreads();
 
         // Accumulate the dot products
         for (int j = 0; j < dim; j++) {
             sum_AC += s_A[ty][j] * s_C[j][tx];
             sum_BD += s_B[ty][j] * s_D[j][tx];
         }
-        __syncthreads(); // Ensures all threads have completed the dot products before loading the next tile
+        __syncthreads();
     }
     // Write back the subtraction to E
     if (row < N && col < N) {
@@ -57,15 +57,14 @@ __global__ void compute_E(float* A, float* B, float* C, float* D, float* E, int 
     }
 }
 
-__global__ void compute_F(float* A, float* B, float* C, float* D, float* F, int N) {
+__global__ void compute_F(int* A, int* B, int* C, int* D, int* F, int N) {
     // Allocate shared memory 
-    __shared__ float s_A[TILE_SIZE][TILE_SIZE];
-    __shared__ float s_B[TILE_SIZE][TILE_SIZE];
-    __shared__ float s_C[TILE_SIZE][TILE_SIZE];
-    __shared__ float s_D[TILE_SIZE][TILE_SIZE];
+    __shared__ int s_A[TILE_SIZE][TILE_SIZE];
+    __shared__ int s_B[TILE_SIZE][TILE_SIZE];
+    __shared__ int s_C[TILE_SIZE][TILE_SIZE];
+    __shared__ int s_D[TILE_SIZE][TILE_SIZE];
 
     // Calculate the global row and column for each thread 
-    // The row and column indices determine which element of the output matrix F the thread will compute.
     int row = blockIdx.y * blockDim.y + threadIdx.y;
     int col = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -73,8 +72,8 @@ __global__ void compute_F(float* A, float* B, float* C, float* D, float* F, int 
     int ty = threadIdx.y;
     int dim = blockDim.x;
 
-    float sum_AD = 0.0f;
-    float sum_BC = 0.0f;
+    int sum_AD = 0;
+    int sum_BC = 0;
 
     for (int i = 0; i < (N + dim - 1) / dim; i++) {
         // Load tiles into shared memory, with boundary checks
@@ -82,15 +81,15 @@ __global__ void compute_F(float* A, float* B, float* C, float* D, float* F, int 
             s_A[ty][tx] = A[row * N + i * dim + tx];
             s_B[ty][tx] = B[row * N + i * dim + tx];
         } else {
-            s_A[ty][tx] = 0.0f;
-            s_B[ty][tx] = 0.0f;
+            s_A[ty][tx] = 0;
+            s_B[ty][tx] = 0;
         }
         if (col < N && (i * dim + ty) < N) {
             s_C[ty][tx] = C[(i * dim + ty) * N + col];
             s_D[ty][tx] = D[(i * dim + ty) * N + col];
         } else {
-            s_C[ty][tx] = 0.0f;
-            s_D[ty][tx] = 0.0f;
+            s_C[ty][tx] = 0;
+            s_D[ty][tx] = 0;
         }
         __syncthreads();
 
@@ -117,17 +116,17 @@ int main(int argc, char *argv[]){
     // Set square matrix dimension (NxN)
     int N = atoi(argv[1]);
 
-    size_t size = N * N * sizeof(float);
+    size_t size = N * N * sizeof(int);
 
     // Allocate host memory
-    float *A = (float *)malloc(size);
-    float *B = (float *)malloc(size);
-    float *C = (float *)malloc(size);
-    float *D = (float *)malloc(size);
-    float *E_cpu = (float *)malloc(size);
-    float *E_gpu = (float *)malloc(size);
-    float *F_cpu = (float *)malloc(size);
-    float *F_gpu = (float *)malloc(size);
+    int *A = (int *)malloc(size);
+    int *B = (int *)malloc(size);
+    int *C = (int *)malloc(size);
+    int *D = (int *)malloc(size);
+    int *E_cpu = (int *)malloc(size);
+    int *E_gpu = (int *)malloc(size);
+    int *F_cpu = (int *)malloc(size);
+    int *F_gpu = (int *)malloc(size);
 
     // Initialize matrices
     initialize_matrix(A, N);
@@ -136,7 +135,7 @@ int main(int argc, char *argv[]){
     initialize_matrix(D, N);
 
     // Allocate device memory
-    float *d_A, *d_B, *d_C, *d_D, *d_E, *d_F;
+    int *d_A, *d_B, *d_C, *d_D, *d_E, *d_F;
     cudaMalloc(&d_A, size);
     cudaMalloc(&d_B, size);
     cudaMalloc(&d_C, size);
@@ -169,7 +168,6 @@ int main(int argc, char *argv[]){
     compute_F<<<BLOCKS, THREADS>>>(d_A, d_B, d_C, d_D, d_F, N);
 
     cudaEventRecord(stop, 0);
-
     cudaEventSynchronize(stop);
 
     float execution_time = 0;
@@ -179,6 +177,9 @@ int main(int argc, char *argv[]){
     // Copy result back to host
     cudaMemcpy(E_gpu, d_E, size, cudaMemcpyDeviceToHost);
     cudaMemcpy(F_gpu, d_F, size, cudaMemcpyDeviceToHost);
+
+    // print_matrix(E_gpu, N, "E_GPU");
+    // print_matrix(F_gpu, N, "F_GPU");
 
     // Verify the result on the CPU
     verify_complex_mat_mul(A, B, C, D, E_cpu, E_gpu, F_cpu, F_gpu, N);

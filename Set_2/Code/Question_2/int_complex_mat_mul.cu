@@ -139,10 +139,10 @@ int main(int argc, char *argv[]){
     initialize_matrix(D, N);
 
     // Print the matrices
-    /*print_matrix(A, N, "Matrix A");
-    print_matrix(B, N, "Matrix B");
-    print_matrix(C, N, "Matrix C");
-    print_matrix(D, N, "Matrix D");*/
+    // print_matrix(A, N, "Matrix A");
+    // print_matrix(B, N, "Matrix B");
+    // print_matrix(C, N, "Matrix C");
+    // print_matrix(D, N, "Matrix D");
 
     // Allocate device memory
     int *d_A, *d_B, *d_C, *d_D, *d_E, *d_F;
@@ -195,7 +195,7 @@ int main(int argc, char *argv[]){
     cudaMemcpy(F_gpu, d_F, size, cudaMemcpyDeviceToHost);
 
     // Print E_gpu and F_gpu for debugging
-    //print_matrix(E_gpu, N, "Matrix E_gpu");
+    // print_matrix(E_gpu, N, "Matrix E_gpu");
     //print_matrix(F_gpu, N, "Matrix F_gpu");
 
 
