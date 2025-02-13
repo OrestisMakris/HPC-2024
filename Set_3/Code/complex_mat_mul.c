@@ -14,17 +14,17 @@ int main(int argc, char* argv[]) {
     int N = atoi(argv[1]);
 
     // Initialize matrices A, B, C, D
-    float *A = (float *)malloc(N * N * sizeof(float));
-    float *B = (float *)malloc(N * N * sizeof(float));
-    float *C = (float *)malloc(N * N * sizeof(float));
-    float *D = (float *)malloc(N * N * sizeof(float));
+    int *A = (int *)malloc(N * N * sizeof(int));
+    int *B = (int *)malloc(N * N * sizeof(int));
+    int *C = (int *)malloc(N * N * sizeof(int));
+    int *D = (int *)malloc(N * N * sizeof(int));
 
     // Initialize result matrices E and F
-    float *E_cpu = (float *)malloc(N * N * sizeof(float));
-    float *E_gpu = (float *)malloc(N * N * sizeof(float));
+    int *E_cpu = (int *)malloc(N * N * sizeof(int));
+    int *E_gpu = (int *)malloc(N * N * sizeof(int));
 
-    float *F_cpu = (float *)malloc(N * N * sizeof(float));
-    float *F_gpu = (float *)malloc(N * N * sizeof(float));
+    int *F_cpu = (int *)malloc(N * N * sizeof(int));
+    int *F_gpu = (int *)malloc(N * N * sizeof(int));
 
     // Initialize matrices A , C, D
     initialize_matrix(A, N);
@@ -50,9 +50,9 @@ int main(int argc, char* argv[]) {
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N; j++) {
                 // Initialze temp dot product variables at index (i,j) for each matrix multiplication
-                float dot_AC = 0.0f, dot_BD = 0.0f;
+                int dot_AC = 0, dot_BD = 0;
 
-                float dot_AD = 0.0f, dot_BC = 0.0f;
+                int dot_AD = 0, dot_BC = 0;
 
                 // Compute the dot products for E and F at index (i, j)
                 for (int k = 0; k < N; k++) {

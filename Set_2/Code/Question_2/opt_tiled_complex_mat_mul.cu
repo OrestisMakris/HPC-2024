@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
     cudaEventRecord(start, 0);
 
     compute_PQR<<<BLOCKS, THREADS>>>(d_A, d_B, d_C, d_D, d_P, d_Q, d_R, N);
-    //cudaDeviceSynchronize(); // Ensure P, Q, R are computed before computing E, F
+    cudaDeviceSynchronize(); // Ensure P, Q, R are computed before computing E, F
     compute_EF<<<BLOCKS, THREADS>>>(d_P, d_Q, d_R, d_E, d_F, N);
 
     cudaEventRecord(stop, 0);
