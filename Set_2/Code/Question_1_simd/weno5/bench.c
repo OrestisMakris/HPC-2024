@@ -104,7 +104,6 @@ void benchmark(int argc, char *argv[], const int NENTRIES_, const int NTIMES, co
     double start_time = get_wtime();
     weno_minus_reference(a, b, c, d, e, gold, NENTRIES);
     double end_time = get_wtime();
-    printf("Time for weno_minus_reference (gold): %.6f seconds\n", end_time - start_time);
 
     // Total time accumulated across NTIMES iterations
     double total_time = 0.0;
@@ -120,7 +119,7 @@ void benchmark(int argc, char *argv[], const int NENTRIES_, const int NTIMES, co
     printf("Total time for %d iterations: %.3f seconds\n", NTIMES, total_time);
 
     // Accuracy check
-    const double tol = 1e-4;
+    const double tol = 1e-5;
     printf("minus: verifying accuracy with tolerance %.5e...", tol);
     check_error(tol, gold, result, NENTRIES);
     printf("passed!\n");
@@ -143,7 +142,7 @@ int main (int argc, char *  argv[])
 
 	int verbose = 0;
 	int NENTRIES = 10e6;
-	int NTIMES = 10000;
+	int NTIMES = 1;
 
   // Determine which implementation to use based on binary name
     weno_func implementation = weno_minus_reference;
@@ -172,11 +171,6 @@ int main (int argc, char *  argv[])
     impl_name = "Builtin-aligned";
 	}
 
-	// if (strcmp(binary_name, "bench_unrolled") == 0) {
-	// implementation = weno_minus_unrolled;
-	// impl_name = "Unrolled";
-	// }
-
 	if (strcmp(binary_name, "bench_omp_optimized") == 0) {
 	implementation = weno_minus_omp_optimized;
 	impl_name = "OpenMP SIMD Optimized";
@@ -186,6 +180,16 @@ int main (int argc, char *  argv[])
 	implementation = weno_minus_sse;
 	impl_name = "SSE";
 	}
+
+    if (strcmp(binary_name, "bench_avx_fma") == 0) {
+        implementation = weno_minus_avx_fma;
+        impl_name = "AVX FMA";
+    }
+
+    if (strcmp(binary_name, "bench_avx_aligned") == 0) {
+        implementation = weno_minus_avx_aligned;
+        impl_name = "AVX Aligned";
+    }
 
 
 	printf("Running %s implementation\n", impl_name);

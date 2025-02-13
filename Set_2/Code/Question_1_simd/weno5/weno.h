@@ -360,8 +360,219 @@ void weno_minus_sse(const float *restrict a, const float *restrict b,
         _mm_storeu_ps(&out[i], result);
     }
 
+
+
     // Handle remaining elements
     for (; i < NENTRIES; ++i) {
         out[i] = weno_minus_core(a[i], b[i], c[i], d[i], e[i]);
     }
+}
+
+
+void weno_minus_avx_fma(const float *restrict a, const float *restrict b,
+    const float *restrict c, const float *restrict d,
+    const float *restrict e, float *restrict out,
+    const int NENTRIES)
+{
+int i;
+const __m256 factor0 = _mm256_set1_ps(0.1f);
+const __m256 factor1 = _mm256_set1_ps(0.6f);
+const __m256 factor2 = _mm256_set1_ps(0.3f);
+const __m256 one_third = _mm256_set1_ps(1.0f/3.0f);
+const __m256 neg_seven_six = _mm256_set1_ps(-7.0f/6.0f);
+const __m256 eleven_six = _mm256_set1_ps(11.0f/6.0f);
+const __m256 neg_one_six = _mm256_set1_ps(-1.0f/6.0f);
+const __m256 five_six = _mm256_set1_ps(5.0f/6.0f);
+const __m256 one = _mm256_set1_ps(1.0f);
+const __m256 eps = _mm256_set1_ps(WENOEPS);
+
+for (i = 0; i <= NENTRIES - 8; i += 8) {
+__m256 va = _mm256_loadu_ps(&a[i]);
+__m256 vb = _mm256_loadu_ps(&b[i]);
+__m256 vc = _mm256_loadu_ps(&c[i]);
+__m256 vd = _mm256_loadu_ps(&d[i]);
+__m256 ve = _mm256_loadu_ps(&e[i]);
+
+// Smoothness indicator is0 using FMA
+__m256 term1 = _mm256_mul_ps(va, 
+      _mm256_fmadd_ps(va, _mm256_set1_ps(4.0f/3.0f), 
+      _mm256_fmadd_ps(vb, _mm256_set1_ps(-19.0f/3.0f), 
+                      _mm256_mul_ps(vc, _mm256_set1_ps(11.0f/3.0f)))));
+__m256 term2 = _mm256_mul_ps(vb, 
+      _mm256_fmadd_ps(vb, _mm256_set1_ps(25.0f/3.0f), 
+                      _mm256_mul_ps(vc, _mm256_set1_ps(-31.0f/3.0f))));
+__m256 term3 = _mm256_mul_ps(_mm256_mul_ps(vc, vc), _mm256_set1_ps(10.0f/3.0f));
+__m256 is0_val = _mm256_add_ps(_mm256_add_ps(term1, term2), term3);
+
+// Smoothness indicator is1 using FMA
+__m256 is1_term1 = _mm256_mul_ps(vb, 
+            _mm256_fmadd_ps(vb, _mm256_set1_ps(4.0f/3.0f), 
+            _mm256_fmadd_ps(vc, _mm256_set1_ps(-13.0f/3.0f), 
+                            _mm256_mul_ps(vd, _mm256_set1_ps(5.0f/3.0f)))));
+__m256 is1_term2 = _mm256_mul_ps(vc, 
+            _mm256_fmadd_ps(vc, _mm256_set1_ps(13.0f/3.0f), 
+                            _mm256_mul_ps(vd, _mm256_set1_ps(-13.0f/3.0f))));
+__m256 is1_term3 = _mm256_mul_ps(_mm256_mul_ps(vd, vd), _mm256_set1_ps(4.0f/3.0f));
+__m256 is1_val = _mm256_add_ps(_mm256_add_ps(is1_term1, is1_term2), is1_term3);
+
+// Smoothness indicator is2 using FMA
+__m256 is2_term1 = _mm256_mul_ps(vc, 
+            _mm256_fmadd_ps(vc, _mm256_set1_ps(10.0f/3.0f), 
+            _mm256_fmadd_ps(vd, _mm256_set1_ps(-31.0f/3.0f), 
+                            _mm256_mul_ps(ve, _mm256_set1_ps(11.0f/3.0f)))));
+__m256 is2_term2 = _mm256_mul_ps(vd, 
+            _mm256_fmadd_ps(vd, _mm256_set1_ps(25.0f/3.0f), 
+                            _mm256_mul_ps(ve, _mm256_set1_ps(-19.0f/3.0f))));
+__m256 is2_term3 = _mm256_mul_ps(_mm256_mul_ps(ve, ve), _mm256_set1_ps(4.0f/3.0f));
+__m256 is2_val = _mm256_add_ps(_mm256_add_ps(is2_term1, is2_term2), is2_term3);
+
+// Add epsilon to avoid division by zero
+__m256 is0plus = _mm256_add_ps(is0_val, eps);
+__m256 is1plus = _mm256_add_ps(is1_val, eps);
+__m256 is2plus = _mm256_add_ps(is2_val, eps);
+
+// Squared denominators
+__m256 is0plus_sq = _mm256_mul_ps(is0plus, is0plus);
+__m256 is1plus_sq = _mm256_mul_ps(is1plus, is1plus);
+__m256 is2plus_sq = _mm256_mul_ps(is2plus, is2plus);
+
+// Alpha weights using division and factors
+__m256 alpha0 = _mm256_div_ps(factor0, is0plus_sq);
+__m256 alpha1 = _mm256_div_ps(factor1, is1plus_sq);
+__m256 alpha2 = _mm256_div_ps(factor2, is2plus_sq);
+
+// Normalized weights
+__m256 alphasum = _mm256_add_ps(_mm256_add_ps(alpha0, alpha1), alpha2);
+__m256 inv_alpha = _mm256_div_ps(one, alphasum);
+__m256 omega0 = _mm256_mul_ps(alpha0, inv_alpha);
+__m256 omega1 = _mm256_mul_ps(alpha1, inv_alpha);
+__m256 omega2 = _mm256_sub_ps(one, _mm256_add_ps(omega0, omega1));
+
+// Compute stencils using FMA
+__m256 stencil0 = _mm256_fmadd_ps(vb, neg_seven_six,
+          _mm256_fmadd_ps(vc, eleven_six,
+          _mm256_mul_ps(va, one_third)));
+__m256 stencil1 = _mm256_fmadd_ps(vc, five_six,
+          _mm256_fmadd_ps(vd, one_third,
+          _mm256_mul_ps(vb, neg_one_six)));
+__m256 stencil2 = _mm256_fmadd_ps(vd, five_six,
+          _mm256_fmadd_ps(ve, neg_one_six,
+          _mm256_mul_ps(vc, one_third)));
+
+__m256 result = _mm256_add_ps(_mm256_mul_ps(omega0, stencil0),
+     _mm256_add_ps(_mm256_mul_ps(omega1, stencil1),
+                   _mm256_mul_ps(omega2, stencil2)));
+
+_mm256_storeu_ps(&out[i], result);
+}
+
+// Process any remaining elements
+for (; i < NENTRIES; ++i) {
+out[i] = weno_minus_core(a[i], b[i], c[i], d[i], e[i]);
+}
+}
+
+// Language: C
+void weno_minus_avx_aligned(const float *restrict a, const float *restrict b,
+    const float *restrict c, const float *restrict d,
+    const float *restrict e, float *restrict out,
+    const int NENTRIES)
+{
+int i;
+
+// Tell the compiler that these pointers are 32-byte aligned
+const float *a_aligned = __builtin_assume_aligned(a, 32);
+const float *b_aligned = __builtin_assume_aligned(b, 32);
+const float *c_aligned = __builtin_assume_aligned(c, 32);
+const float *d_aligned = __builtin_assume_aligned(d, 32);
+const float *e_aligned = __builtin_assume_aligned(e, 32);
+float *out_aligned = __builtin_assume_aligned(out, 32);
+
+// Process in chunks of 8 using aligned loads
+for (i = 0; i <= NENTRIES - 8; i += 8) {
+// Fast 32-byte aligned loads
+__m256 va = _mm256_load_ps(&a_aligned[i]);
+__m256 vb = _mm256_load_ps(&b_aligned[i]);
+__m256 vc = _mm256_load_ps(&c_aligned[i]);
+__m256 vd = _mm256_load_ps(&d_aligned[i]);
+__m256 ve = _mm256_load_ps(&e_aligned[i]);
+
+// Compute smoothness indicators and weights using FMA:
+__m256 term1 = _mm256_mul_ps(va, 
+_mm256_fmadd_ps(va, _mm256_set1_ps(4.0f/3.0f), 
+_mm256_fmadd_ps(vb, _mm256_set1_ps(-19.0f/3.0f), 
+      _mm256_mul_ps(vc, _mm256_set1_ps(11.0f/3.0f)))));
+__m256 term2 = _mm256_mul_ps(vb, 
+_mm256_fmadd_ps(vb, _mm256_set1_ps(25.0f/3.0f), 
+      _mm256_mul_ps(vc, _mm256_set1_ps(-31.0f/3.0f))));
+__m256 term3 = _mm256_mul_ps(_mm256_mul_ps(vc, vc), _mm256_set1_ps(10.0f/3.0f));
+__m256 is0_val = _mm256_add_ps(_mm256_add_ps(term1, term2), term3);
+
+__m256 is1_term1 = _mm256_mul_ps(vb, 
+_mm256_fmadd_ps(vb, _mm256_set1_ps(4.0f/3.0f), 
+_mm256_fmadd_ps(vc, _mm256_set1_ps(-13.0f/3.0f), 
+        _mm256_mul_ps(vd, _mm256_set1_ps(5.0f/3.0f)))));
+__m256 is1_term2 = _mm256_mul_ps(vc, 
+_mm256_fmadd_ps(vc, _mm256_set1_ps(13.0f/3.0f), 
+        _mm256_mul_ps(vd, _mm256_set1_ps(-13.0f/3.0f))));
+__m256 is1_term3 = _mm256_mul_ps(vd, vd);
+is1_term3 = _mm256_mul_ps(is1_term3, _mm256_set1_ps(4.0f/3.0f));
+__m256 is1_val = _mm256_add_ps(_mm256_add_ps(is1_term1, is1_term2), is1_term3);
+
+__m256 is2_term1 = _mm256_mul_ps(vc, 
+_mm256_fmadd_ps(vc, _mm256_set1_ps(10.0f/3.0f), 
+_mm256_fmadd_ps(vd, _mm256_set1_ps(-31.0f/3.0f), 
+        _mm256_mul_ps(ve, _mm256_set1_ps(11.0f/3.0f)))));
+__m256 is2_term2 = _mm256_mul_ps(vd, 
+_mm256_fmadd_ps(vd, _mm256_set1_ps(25.0f/3.0f), 
+        _mm256_mul_ps(ve, _mm256_set1_ps(-19.0f/3.0f))));
+__m256 is2_term3 = _mm256_mul_ps(ve, ve);
+is2_term3 = _mm256_mul_ps(is2_term3, _mm256_set1_ps(4.0f/3.0f));
+__m256 is2_val = _mm256_add_ps(_mm256_add_ps(is2_term1, is2_term2), is2_term3);
+
+// Add epsilon to avoid zero denominator (WENOEPS is defined elsewhere)
+__m256 eps = _mm256_set1_ps(WENOEPS);
+__m256 is0plus = _mm256_add_ps(is0_val, eps);
+__m256 is1plus = _mm256_add_ps(is1_val, eps);
+__m256 is2plus = _mm256_add_ps(is2_val, eps);
+
+__m256 is0plus_sq = _mm256_mul_ps(is0plus, is0plus);
+__m256 is1plus_sq = _mm256_mul_ps(is1plus, is1plus);
+__m256 is2plus_sq = _mm256_mul_ps(is2plus, is2plus);
+
+__m256 alpha0 = _mm256_div_ps(_mm256_set1_ps(0.1f), is0plus_sq);
+__m256 alpha1 = _mm256_div_ps(_mm256_set1_ps(0.6f), is1plus_sq);
+__m256 alpha2 = _mm256_div_ps(_mm256_set1_ps(0.3f), is2plus_sq);
+
+__m256 alphasum = _mm256_add_ps(_mm256_add_ps(alpha0, alpha1), alpha2);
+__m256 inv_alpha = _mm256_div_ps(_mm256_set1_ps(1.0f), alphasum);
+__m256 omega0 = _mm256_mul_ps(alpha0, inv_alpha);
+__m256 omega1 = _mm256_mul_ps(alpha1, inv_alpha);
+__m256 omega2 = _mm256_sub_ps(_mm256_set1_ps(1.0f), _mm256_add_ps(omega0, omega1));
+
+__m256 stencil0 = _mm256_mul_ps(va, _mm256_set1_ps(1.0f/3.0f));
+stencil0 = _mm256_fmadd_ps(vb, _mm256_set1_ps(-7.0f/6.0f), stencil0);
+stencil0 = _mm256_fmadd_ps(vc, _mm256_set1_ps(11.0f/6.0f), stencil0);
+stencil0 = _mm256_mul_ps(omega0, stencil0);
+
+__m256 stencil1 = _mm256_mul_ps(vb, _mm256_set1_ps(-1.0f/6.0f));
+stencil1 = _mm256_fmadd_ps(vc, _mm256_set1_ps(5.0f/6.0f), stencil1);
+stencil1 = _mm256_fmadd_ps(vd, _mm256_set1_ps(1.0f/3.0f), stencil1);
+stencil1 = _mm256_mul_ps(omega1, stencil1);
+
+__m256 stencil2 = _mm256_mul_ps(vc, _mm256_set1_ps(1.0f/3.0f));
+stencil2 = _mm256_fmadd_ps(vd, _mm256_set1_ps(5.0f/6.0f), stencil2);
+stencil2 = _mm256_fmadd_ps(ve, _mm256_set1_ps(-1.0f/6.0f), stencil2);
+stencil2 = _mm256_mul_ps(omega2, stencil2);
+
+__m256 result = _mm256_add_ps(stencil0, stencil1);
+result = _mm256_add_ps(result, stencil2);
+
+_mm256_store_ps(&out_aligned[i], result);
+}
+// Process any remaining elements
+for (; i < NENTRIES; ++i) {
+out_aligned[i] = weno_minus_core(a_aligned[i], b_aligned[i], c_aligned[i],
+                 d_aligned[i], e_aligned[i]);
+}
 }
