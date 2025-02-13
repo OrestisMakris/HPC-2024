@@ -16,7 +16,7 @@ saxpy_restrict: saxpy_restrict.c
 	$(CC) $(CFLAGS) -O2 -ftree-vectorize saxpy_restrict.c -o saxpy_restrict
 
 saxpy_aligned: saxpy_aligned.c
-	$(CC) $(CFLAGS) -O3 -ftree-vectorize saxpy_aligned.c -o saxpy_aligned
+	$(CC) $(CFLAGS)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               saxpy_aligned.c -o saxpy_aligned
 
 saxpy_simple.o: saxpy_simple.c
 	$(CC) $(CFLAGS) -O3 -save-temps -ftree-vectorize -c saxpy_simple.c -o saxpy_simple.o
