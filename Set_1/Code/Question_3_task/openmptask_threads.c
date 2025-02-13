@@ -3,12 +3,11 @@
 #include <math.h>
 #include <omp.h>
 
-#define ARRAY_SIZE 10000  // Large number of iterations for heavy computation
-#define BLOCK_SIZE 1000     // Grain size or block size for tasks
+#define BLOCK_SIZE 1000  // Block size (grain size) for tasks
 
-//-------------------------
+//--------------------------------------
 // Heavy computation function
-//-------------------------
+//--------------------------------------
 double work(int i) {
     double result = 0.0;
     for (int j = 0; j < 10000; j++) { // Heavy inner loop
@@ -16,31 +15,30 @@ double work(int i) {
     }
     return result;
 }
-//------------------------
+
+//--------------------------------------
 // Function Prototypes
-//-------------------------
+//--------------------------------------
 void initialize_serial(double *A, int size);
-void initialize_tasks(double *A, int size);
 void initialize_threads(double *A, int size);
+void initialize_tasks(double *A, int size);
 void initialize_tasks_optimized(double *A, int size, int block_size);
 void initialize_tasks_taskloop(double *A, int size, int block_size);
 double compute_sum_tasks(int size, int block_size);
 double max_difference(double *A, double *B, int size);
-//------------------------
+
+//--------------------------------------
 // Serial implementation
-//-------------------------
+//--------------------------------------
 void initialize_serial(double *A, int size) {
     for (int i = 0; i < size; i++) {
         A[i] = work(i);
     }
 }
 
+//--------------------------------------
 // OpenMP threads implementation using parallel for
-//-------------------------
-// OpenMP Threads Implementation:
-// Parallelize the loop using 'parallel for' directive.
-// The 'schedule' clause specifies the dynamic scheduling policy with chunk size 2.
-//-------------------------
+//--------------------------------------
 void initialize_threads(double *A, int size) {
     #pragma omp parallel for schedule(dynamic, 2)
     for (int i = 0; i < size; i++) {
@@ -48,13 +46,9 @@ void initialize_threads(double *A, int size) {
     }
 }
 
+//--------------------------------------
 // OpenMP tasks implementation: one task per iteration
-//-------------------------
-// OpenMP Tasks Implementation:
-// Create a task for each iteration of the loop to parallelize the work.
-// The 'firstprivate' clause ensures that each task has its own copy of the loop index.
-//-------------------------
-
+//--------------------------------------
 void initialize_tasks(double *A, int size) {
     #pragma omp parallel
     {
@@ -66,17 +60,16 @@ void initialize_tasks(double *A, int size) {
                     A[i] = work(i);
                 }
             }
-            // Wait for all tasks to complete
             #pragma omp taskwait
         }
     }
 }
 
-//-------------------------
+//--------------------------------------
 // OpenMP Optimized Tasks:
-// Group iterations into blocks to reduce the overhead of creating many tasks.
-// Also, we add the 'untied' clause to allow flexibility in task scheduling.
-//-------------------------
+// Group iterations into blocks to reduce task creation overhead.
+// The 'untied' clause gives flexibility in task scheduling.
+//--------------------------------------
 void initialize_tasks_optimized(double *A, int size, int block_size) {
     #pragma omp parallel
     {
@@ -97,19 +90,16 @@ void initialize_tasks_optimized(double *A, int size, int block_size) {
     }
 }
 
-//-------------------------
+//--------------------------------------
 // OpenMP Taskloop Implementation:
-// Uses the 'taskloop' directive to automatically break the loop into tasks.
-// The 'grainsize' clause specifies the minimum number of iterations per task,
-// and the 'untied' clause gives more scheduling flexibility.
-//-------------------------
+// Uses the 'taskloop' directive to automatically create tasks.
+//--------------------------------------
 void initialize_tasks_taskloop(double *A, int size, int block_size) {
     #pragma omp parallel
     {
         #pragma omp single nowait
         {
             #pragma omp taskloop grainsize(block_size)
-
             for (int i = 0; i < size; i++) {
                 A[i] = work(i);
             }
@@ -117,11 +107,11 @@ void initialize_tasks_taskloop(double *A, int size, int block_size) {
     }
 }
 
-//-------------------------
+//--------------------------------------
 // OpenMP Tasks with Reduction:
 // Computes a global sum over all work(i) values using a taskloop with reduction.
-// Note: Task reduction is available in OpenMP 5.0 and later.
-//-------------------------
+// (Requires OpenMP 5.0 or later.)
+//--------------------------------------
 double compute_sum_tasks(int size, int block_size) {
     double sum = 0.0;
     #pragma omp parallel reduction(+:sum)
@@ -137,9 +127,9 @@ double compute_sum_tasks(int size, int block_size) {
     return sum;
 }
 
-//-------------------------
+//--------------------------------------
 // Utility: Compute maximum absolute difference between two arrays
-//-------------------------
+//--------------------------------------
 double max_difference(double *A, double *B, int size) {
     double max_diff = 0.0;
     for (int i = 0; i < size; i++) {
@@ -150,72 +140,134 @@ double max_difference(double *A, double *B, int size) {
     return max_diff;
 }
 
-//-------------------------
-// Main function: Compare various implementations and their timings/results
-//-------------------------
+//--------------------------------------
+// Main: Run multiple tests over various array sizes and thread counts
+//--------------------------------------
 int main() {
-    // Allocate arrays for serial, taskloop, and optimized tasks implementations.
-    double *A_serial    = (double *)malloc(ARRAY_SIZE * sizeof(double));
-    double *A_taskloop  = (double *)malloc(ARRAY_SIZE * sizeof(double));
-    double *A_tasks_opt = (double *)malloc(ARRAY_SIZE * sizeof(double));
+    // Define the array sizes (number of iterations) to test.
+    int sizes[] = {1000, 10000, 10000, 100000};
+    int num_sizes = sizeof(sizes) / sizeof(sizes[0]);
 
-    double start, end;
-    double time_serial, time_taskloop, time_tasks_opt, time_sum;
-    double sum_tasks;
+    // Define the number of threads to test.
+    int thread_counts[] = {2, 4, 8, 16, 24, 28, 32};
+    int num_thread_counts = sizeof(thread_counts) / sizeof(thread_counts[0]);
 
-    //--- Serial Execution ---
-    start = omp_get_wtime();
-    initialize_serial(A_serial, ARRAY_SIZE);
-    end = omp_get_wtime();
-    time_serial = end - start;
-    printf("Serial execution time: %f seconds\n", time_serial);
+    // Open a CSV file for writing results.
+    FILE *fp = fopen("results.csv", "w");
+    if (fp == NULL) {
+        perror("Cannot open results.csv for writing");
+        return 1;
+    }
+    // CSV header: Method,ArraySize,NumThreads,ExecutionTime,MaxError,Sum
+    fprintf(fp, "Method,ArraySize,NumThreads,ExecutionTime,MaxError,Sum\n");
 
-    //--- OpenMP Threads Execution ---
-    start = omp_get_wtime();
-    initialize_threads(A_taskloop, ARRAY_SIZE);
-    end = omp_get_wtime();
-    double time_threads = end - start;
-    printf("Threads execution time: %f seconds\n", time_threads);
-    double diff_threads = max_difference(A_serial, A_taskloop, ARRAY_SIZE);
-    printf("Threads max difference vs serial: %e\n", diff_threads);
-    
-    //--- OpenMP Task Execution ---
-    start = omp_get_wtime();
-    initialize_tasks(A_taskloop, ARRAY_SIZE);
-    end = omp_get_wtime();
-    time_taskloop = end - start;
-    printf("Task execution time: %f seconds\n", time_taskloop);
-    double diff_task = max_difference(A_serial, A_taskloop, ARRAY_SIZE);
-    printf("Task max difference vs serial: %e\n", diff_task);
+    // Disable dynamic adjustment of threads.
+    omp_set_dynamic(0);
 
-    //--- OpenMP Taskloop Execution ---
-    start = omp_get_wtime();
-    initialize_tasks_taskloop(A_taskloop, ARRAY_SIZE, BLOCK_SIZE);
-    end = omp_get_wtime();
-    time_taskloop = end - start;
-    printf("Taskloop execution time: %f seconds\n", time_taskloop);
-    double diff_taskloop = max_difference(A_serial, A_taskloop, ARRAY_SIZE);
-    printf("Taskloop max difference vs serial: %e\n", diff_taskloop);
+    // For each array size, run tests.
+    for (int s = 0; s < num_sizes; s++) {
+        int current_size = sizes[s];
+        printf("===== Array Size: %d =====\n", current_size);
 
-    //--- OpenMP Optimized Tasks Execution (Block-based Tasks) ---
-    start = omp_get_wtime();
-    initialize_tasks_optimized(A_tasks_opt, ARRAY_SIZE, BLOCK_SIZE);
-    end = omp_get_wtime();
-    time_tasks_opt = end - start;
-    printf("Optimized tasks execution time: %f seconds\n", time_tasks_opt);
-    double diff_tasks_opt = max_difference(A_serial, A_tasks_opt, ARRAY_SIZE);
-    printf("Optimized tasks max difference vs serial: %e\n", diff_tasks_opt);
+        // Allocate the serial result array.
+        double *A_serial = (double *)malloc(current_size * sizeof(double));
+        if (A_serial == NULL) {
+            fprintf(stderr, "Memory allocation failed for A_serial\n");
+            return 1;
+        }
 
-    //--- OpenMP Tasks with Reduction for Global Sum ---
-    start = omp_get_wtime();
-    sum_tasks = compute_sum_tasks(ARRAY_SIZE, BLOCK_SIZE);
-    end = omp_get_wtime();
-    time_sum = end - start;
-    printf("Tasks reduction (global sum) execution time: %f seconds, sum = %f\n", time_sum, sum_tasks);
-    // Cleanup
-    free(A_serial);
-    free(A_taskloop);
-    free(A_tasks_opt);
+        // --- Serial Test (baseline) ---
+        omp_set_num_threads(1);
+        double start = omp_get_wtime();
+        initialize_serial(A_serial, current_size);
+        double end = omp_get_wtime();
+        double time_serial = end - start;
+        printf("Serial: ArraySize = %d, Threads = %d, Time = %f sec\n", current_size, 1, time_serial);
+        fprintf(fp, "Serial,%d,%d,%f,0,\n", current_size, 1, time_serial);
 
+        // For each thread count, run the parallel methods.
+        for (int t = 0; t < num_thread_counts; t++) {
+            int nthreads = thread_counts[t];
+            omp_set_num_threads(nthreads);
+
+            // 1. Threads (parallel for)
+            double *A_threads = (double *)malloc(current_size * sizeof(double));
+            if (A_threads == NULL) {
+                fprintf(stderr, "Memory allocation failed for A_threads\n");
+                return 1;
+            }
+            start = omp_get_wtime();
+            initialize_threads(A_threads, current_size);
+            end = omp_get_wtime();
+            double time_threads = end - start;
+            double err_threads = max_difference(A_serial, A_threads, current_size);
+            printf("Threads: ArraySize = %d, Threads = %d, Time = %f sec, MaxDiff = %e\n",
+                   current_size, nthreads, time_threads, err_threads);
+            fprintf(fp, "Threads,%d,%d,%f,%e,\n", current_size, nthreads, time_threads, err_threads);
+            free(A_threads);
+
+            // 2. Tasks (one task per iteration)
+            double *A_tasks = (double *)malloc(current_size * sizeof(double));
+            if (A_tasks == NULL) {
+                fprintf(stderr, "Memory allocation failed for A_tasks\n");
+                return 1;
+            }
+            start = omp_get_wtime();
+            initialize_tasks(A_tasks, current_size);
+            end = omp_get_wtime();
+            double time_tasks = end - start;
+            double err_tasks = max_difference(A_serial, A_tasks, current_size);
+            printf("Tasks: ArraySize = %d, Threads = %d, Time = %f sec, MaxDiff = %e\n",
+                   current_size, nthreads, time_tasks, err_tasks);
+            fprintf(fp, "Tasks,%d,%d,%f,%e,\n", current_size, nthreads, time_tasks, err_tasks);
+            free(A_tasks);
+
+            // 3. Taskloop
+            double *A_taskloop = (double *)malloc(current_size * sizeof(double));
+            if (A_taskloop == NULL) {
+                fprintf(stderr, "Memory allocation failed for A_taskloop\n");
+                return 1;
+            }
+            start = omp_get_wtime();
+            initialize_tasks_taskloop(A_taskloop, current_size, BLOCK_SIZE);
+            end = omp_get_wtime();
+            double time_taskloop = end - start;
+            double err_taskloop = max_difference(A_serial, A_taskloop, current_size);
+            printf("Taskloop: ArraySize = %d, Threads = %d, Time = %f sec, MaxDiff = %e\n",
+                   current_size, nthreads, time_taskloop, err_taskloop);
+            fprintf(fp, "Taskloop,%d,%d,%f,%e,\n", current_size, nthreads, time_taskloop, err_taskloop);
+            free(A_taskloop);
+
+            // 4. Optimized Tasks (grouped tasks)
+            double *A_tasks_opt = (double *)malloc(current_size * sizeof(double));
+            if (A_tasks_opt == NULL) {
+                fprintf(stderr, "Memory allocation failed for A_tasks_opt\n");
+                return 1;
+            }
+            start = omp_get_wtime();
+            initialize_tasks_optimized(A_tasks_opt, current_size, BLOCK_SIZE);
+            end = omp_get_wtime();
+            double time_tasks_opt = end - start;
+            double err_tasks_opt = max_difference(A_serial, A_tasks_opt, current_size);
+            printf("OptimizedTasks: ArraySize = %d, Threads = %d, Time = %f sec, MaxDiff = %e\n",
+                   current_size, nthreads, time_tasks_opt, err_tasks_opt);
+            fprintf(fp, "OptimizedTasks,%d,%d,%f,%e,\n", current_size, nthreads, time_tasks_opt, err_tasks_opt);
+            free(A_tasks_opt);
+
+            // 5. Tasks Reduction (global sum)
+            start = omp_get_wtime();
+            double sum_tasks = compute_sum_tasks(current_size, BLOCK_SIZE);
+            end = omp_get_wtime();
+            double time_reduction = end - start;
+            printf("Reduction: ArraySize = %d, Threads = %d, Time = %f sec, Sum = %f\n",
+                   current_size, nthreads, time_reduction, sum_tasks);
+            fprintf(fp, "Reduction,%d,%d,%f,,%f\n", current_size, nthreads, time_reduction, sum_tasks);
+        }
+        printf("\n");
+        free(A_serial);
+    }
+
+    fclose(fp);
+    printf("Results saved to results.csv\n");
     return 0;
 }
