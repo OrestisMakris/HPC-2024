@@ -14,16 +14,16 @@ CFLAGS_OMP = -O3 -fopenmp -Wall -march=native -Wno-unused-value -O3 -ftree-vecto
 CFLAGS_OMP_OPTIM = -O3 -fopenmp -Wall -march=native -Wno-unused-value -O3 -ftree-vectorize -fopt-info -ffast-math
 
 # Vectorization SIMD flags for AVX implementation
-CFLAGS_AVX= -O3 -mavx -msse4 -mfma -lm -Wno-unused-result -fopt-info-vec -march=native -Wall 
+CFLAGS_AVX= -O3 -mavx -msse4 -lm -Wno-unused-result -fopt-info-vec -march=native -Wall -fno-tree-vectorize
 
 # Vectorization SIMD flags for SSE implementation
-CFLAGS_SSE= -O3 -msse4 -lm -Wno-unused-result -fopt-info-vec -march=native -Wall 
+CFLAGS_SSE= -O3 -msse4 -lm -Wno-unused-result -fopt-info-vec -march=native -Wall -fno-tree-vectorize
 
 #Vectorization SIMD flags for AVX FMA implementation
-CFLAGS_AVX_FMA= -O3 -mavx -mfma -lm -Wno-unused-result -fopt-info-vec -march=native -Wall
+CFLAGS_AVX_FMA= -O3 -mavx -mfma -lm -Wno-unused-result -fopt-info-vec -march=native -Wall -fno-tree-vectorize
 
 #Vectorization SIMD flags for AVX Memory alignment implementation
-CFLAGS_AVX_MEM_ALIGN= -O3 -mavx -mfma -lm -Wno-unused-result -fopt-info-vec -march=native -Wall
+CFLAGS_AVX_MEM_ALIGN= -O3 -mavx -mfma -lm -Wno-unused-result -fopt-info-vec -march=native -Wall -fno-tree-vectorize
 
 LIBS=-lm
 

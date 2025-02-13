@@ -147,12 +147,12 @@ void weno_minus_avx(const float *restrict a, const float *restrict b,
 
         // is0 calculation matching reference order
         __m256 temp1_is0 = _mm256_mul_ps(va, _mm256_set1_ps(4.0f/3.0f));
-        temp1_is0 = _mm256_fmadd_ps(vb, _mm256_set1_ps(-19.0f/3.0f), temp1_is0);
-        temp1_is0 = _mm256_fmadd_ps(vc, _mm256_set1_ps(11.0f/3.0f), temp1_is0);
+        temp1_is0 = _mm256_add_ps(temp1_is0, _mm256_mul_ps(vb, _mm256_set1_ps(-19.0f/3.0f)));
+        temp1_is0 = _mm256_add_ps(temp1_is0, _mm256_mul_ps(vc, _mm256_set1_ps(11.0f/3.0f)));
         temp1_is0 = _mm256_mul_ps(va, temp1_is0);
 
         __m256 temp2_is0 = _mm256_mul_ps(vb, _mm256_set1_ps(25.0f/3.0f));
-        temp2_is0 = _mm256_fmadd_ps(vc, _mm256_set1_ps(-31.0f/3.0f), temp2_is0);
+        temp2_is0 = _mm256_add_ps(temp2_is0, _mm256_mul_ps(vc, _mm256_set1_ps(-31.0f/3.0f)));
         temp2_is0 = _mm256_mul_ps(vb, temp2_is0);
 
         __m256 temp3_is0 = _mm256_mul_ps(vc, vc);
@@ -163,12 +163,12 @@ void weno_minus_avx(const float *restrict a, const float *restrict b,
 
         // is1 calculation matching reference order
         __m256 temp1_is1 = _mm256_mul_ps(vb, _mm256_set1_ps(4.0f/3.0f));
-        temp1_is1 = _mm256_fmadd_ps(vc, _mm256_set1_ps(-13.0f/3.0f), temp1_is1);
-        temp1_is1 = _mm256_fmadd_ps(vd, _mm256_set1_ps(5.0f/3.0f), temp1_is1);
+        temp1_is1 = _mm256_add_ps(temp1_is1, _mm256_mul_ps(vc, _mm256_set1_ps(-13.0f/3.0f)));
+        temp1_is1 = _mm256_add_ps(temp1_is1, _mm256_mul_ps(vd, _mm256_set1_ps(5.0f/3.0f)));
         temp1_is1 = _mm256_mul_ps(vb, temp1_is1);
 
         __m256 temp2_is1 = _mm256_mul_ps(vc, _mm256_set1_ps(13.0f/3.0f));
-        temp2_is1 = _mm256_fmadd_ps(vd, _mm256_set1_ps(-13.0f/3.0f), temp2_is1);
+        temp2_is1 = _mm256_add_ps(temp2_is1, _mm256_mul_ps(vd, _mm256_set1_ps(-13.0f/3.0f)));
         temp2_is1 = _mm256_mul_ps(vc, temp2_is1);
 
         __m256 temp3_is1 = _mm256_mul_ps(vd, vd);
@@ -179,12 +179,12 @@ void weno_minus_avx(const float *restrict a, const float *restrict b,
 
         // is2 calculation matching reference order
         __m256 temp1_is2 = _mm256_mul_ps(vc, _mm256_set1_ps(10.0f/3.0f));
-        temp1_is2 = _mm256_fmadd_ps(vd, _mm256_set1_ps(-31.0f/3.0f), temp1_is2);
-        temp1_is2 = _mm256_fmadd_ps(ve, _mm256_set1_ps(11.0f/3.0f), temp1_is2);
+        temp1_is2 = _mm256_add_ps(temp1_is2, _mm256_mul_ps(vd, _mm256_set1_ps(-31.0f/3.0f)));
+        temp1_is2 = _mm256_add_ps(temp1_is2, _mm256_mul_ps(ve, _mm256_set1_ps(11.0f/3.0f)));
         temp1_is2 = _mm256_mul_ps(vc, temp1_is2);
 
         __m256 temp2_is2 = _mm256_mul_ps(vd, _mm256_set1_ps(25.0f/3.0f));
-        temp2_is2 = _mm256_fmadd_ps(ve, _mm256_set1_ps(-19.0f/3.0f), temp2_is2);
+        temp2_is2 = _mm256_add_ps(temp2_is2, _mm256_mul_ps(ve, _mm256_set1_ps(-19.0f/3.0f)));
         temp2_is2 = _mm256_mul_ps(vd, temp2_is2);
 
         __m256 temp3_is2 = _mm256_mul_ps(ve, ve);
@@ -224,18 +224,18 @@ void weno_minus_avx(const float *restrict a, const float *restrict b,
 
         // Final calculation matching reference order
         __m256 term0 = _mm256_mul_ps(va, _mm256_set1_ps(1.0f/3.0f));
-        term0 = _mm256_fmadd_ps(vb, _mm256_set1_ps(-7.0f/6.0f), term0);
-        term0 = _mm256_fmadd_ps(vc, _mm256_set1_ps(11.0f/6.0f), term0);
+        term0 = _mm256_add_ps(term0, _mm256_mul_ps(vb, _mm256_set1_ps(-7.0f/6.0f)));
+        term0 = _mm256_add_ps(term0, _mm256_mul_ps(vc, _mm256_set1_ps(11.0f/6.0f)));
         term0 = _mm256_mul_ps(omega0, term0);
 
         __m256 term1 = _mm256_mul_ps(vb, _mm256_set1_ps(-1.0f/6.0f));
-        term1 = _mm256_fmadd_ps(vc, _mm256_set1_ps(5.0f/6.0f), term1);
-        term1 = _mm256_fmadd_ps(vd, _mm256_set1_ps(1.0f/3.0f), term1);
+        term1 = _mm256_add_ps(term1, _mm256_mul_ps(vc, _mm256_set1_ps(5.0f/6.0f)));
+        term1 = _mm256_add_ps(term1, _mm256_mul_ps(vd, _mm256_set1_ps(1.0f/3.0f)));
         term1 = _mm256_mul_ps(omega1, term1);
 
         __m256 term2 = _mm256_mul_ps(vc, _mm256_set1_ps(1.0f/3.0f));
-        term2 = _mm256_fmadd_ps(vd, _mm256_set1_ps(5.0f/6.0f), term2);
-        term2 = _mm256_fmadd_ps(ve, _mm256_set1_ps(-1.0f/6.0f), term2);
+        term2 = _mm256_add_ps(term2, _mm256_mul_ps(vd, _mm256_set1_ps(5.0f/6.0f)));
+        term2 = _mm256_add_ps(term2, _mm256_mul_ps(ve, _mm256_set1_ps(-1.0f/6.0f)));
         term2 = _mm256_mul_ps(omega2, term2);
 
         __m256 result = _mm256_add_ps(term0, term1);

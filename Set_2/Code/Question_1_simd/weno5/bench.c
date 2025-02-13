@@ -141,7 +141,7 @@ int main (int argc, char *  argv[])
 	const int debug = 0;
 
 	int verbose = 0;
-	int NENTRIES = 10e6;
+	int NENTRIES = 10e7;
 	int NTIMES = 1;
 
   // Determine which implementation to use based on binary name
@@ -171,7 +171,7 @@ int main (int argc, char *  argv[])
     impl_name = "Builtin-aligned";
 	}
 
-	if (strcmp(binary_name, "bench_omp_optimized") == 0) {
+	if (strcmp(binary_name, "bench_omp_optim") == 0) {
 	implementation = weno_minus_omp_optimized;
 	impl_name = "OpenMP SIMD Optimized";
 	}
