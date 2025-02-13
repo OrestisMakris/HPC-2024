@@ -182,6 +182,7 @@ int main (int argc, char *  argv[])
 	}
 
     if (strcmp(binary_name, "bench_avx_fma") == 0) {
+        
         implementation = weno_minus_avx_fma;
         impl_name = "AVX FMA";
     }

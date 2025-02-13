@@ -27,7 +27,7 @@ CFLAGS_AVX_MEM_ALIGN= -O3 -mavx -mfma -lm -Wno-unused-result -fopt-info-vec -mar
 
 LIBS=-lm
 
-all: bench bench_auto bench_builtin bench_omp bench_omp_optim bench_avx bench_sse bench_avx_fma bench_avx_mem_align
+all: bench bench_auto bench_builtin bench_omp bench_omp_optim bench_avx bench_sse bench_avx_fma bench_avx_aligned
 
 bench: bench.c weno.h
 	$(CC) $(CFLAGS) -o bench bench.c $(LIBS)
@@ -53,8 +53,8 @@ bench_sse: bench.c weno.h
 bench_avx_fma: bench.c weno.h
 	$(CC) $(CFLAGS_AVX_FMA) -o bench_avx_fma bench.c $(LIBS)
 
-bench_avx_mem_align: bench.c weno.h
-	$(CC) $(CFLAGS_AVX_FMA) -o bench_avx_mem_align bench.c $(LIBS)
+bench_avx_aligned: bench.c weno.h
+	$(CC) $(CFLAGS_AVX_MEM_ALIGN) -o bench_avx_aligned bench.c $(LIBS)
 
 clean:
-	rm -f bench bench_auto bench_builtin bench_omp bench_omp_optim bench_avx bench_sse bench_avx_fma bench_avx_mem_align
+	rm -f bench bench_auto bench_builtin bench_omp bench_omp_optim bench_avx bench_sse bench_avx_fma bench_avx_aligned 
