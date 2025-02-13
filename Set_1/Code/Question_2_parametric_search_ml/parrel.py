@@ -51,7 +51,7 @@ pg = ParameterGrid(params)
 start_time = time.time()
 
 # Create a Pool of workers (e.g., using 4 workers)
-with Pool() as pool:
+with Pool(processes=8) as pool:
     results = pool.map(train_and_evaluate, pg)
 
 # End timing

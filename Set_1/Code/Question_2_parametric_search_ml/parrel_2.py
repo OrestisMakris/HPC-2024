@@ -52,7 +52,7 @@ pg = list(ParameterGrid(params))
 start_time = time.time()
 
 # Parallel execution
-with Pool() as pool:
+with Pool(processes=8) as pool:
     results = pool.starmap(train_and_evaluate, [(p, X_train, X_test, y_train, y_test) for p in pg])
 
 # End timing
