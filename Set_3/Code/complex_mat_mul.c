@@ -13,13 +13,13 @@ int main(int argc, char* argv[]) {
     // Set square matrix dimension (NxN)
     int N = atoi(argv[1]);
 
-    // Initialize matrices A, B, C, D
+    // Allocate matrices A, B, C, D
     int *A = (int *)malloc(N * N * sizeof(int));
     int *B = (int *)malloc(N * N * sizeof(int));
     int *C = (int *)malloc(N * N * sizeof(int));
     int *D = (int *)malloc(N * N * sizeof(int));
 
-    // Initialize result matrices E and F
+    // Allocate result matrices E and F
     int *E_cpu = (int *)malloc(N * N * sizeof(int));
     int *E_gpu = (int *)malloc(N * N * sizeof(int));
 
@@ -43,9 +43,9 @@ int main(int argc, char* argv[]) {
     // Start timing the GPU execution
     double start = omp_get_wtime();
 
-    #pragma omp target data map(to: A[0:N*N], B[0:N*N], C[0:N*N], D[0:N*N]) map(from: E_gpu[0:N*N], F_gpu[0:N*N])
+    #pragma omp target data map(to: A[0:N*N], B[0:N*N], C[0:N*N], D[0:N*N]) \
+                         map(from: E_gpu[0:N*N], F_gpu[0:N*N])
     {
-        //#pragma omp target parallel for
         #pragma omp target teams distribute parallel for collapse(2)
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N; j++) {
