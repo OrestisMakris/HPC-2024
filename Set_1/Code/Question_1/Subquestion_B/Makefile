@@ -13,4 +13,4 @@ clean:
 	rm -f hybrid_test  hybrid_exscan ../headers/mpi_exscan_omp.o
 
 # To run mpi code, use the following commands:
-# mpirun -np <num_processes> ./program
+# mpirun -np <num_processes> ./program <num_threads>

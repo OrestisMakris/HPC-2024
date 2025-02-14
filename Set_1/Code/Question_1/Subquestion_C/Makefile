@@ -22,5 +22,8 @@ clean:
 	rm -f hybrid_matrix_io ../headers/mpi_exscan_omp.o ../headers/validate_file.o ../headers/create_random_matrices.o ../headers/print_matrices.o *.bin
 
 
+# Must install ZSTD before running
+# sudo apt install libzstd-dev
+
 # To run mpi code, use the following commands:
-# mpirun -np <num_processes> ./program
+# mpirun -np <num_processes> ./program <num_threads>
